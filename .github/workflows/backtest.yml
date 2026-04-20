@@ -1,0 +1,84 @@
+name: Backtest Walk-Forward
+
+on:
+  workflow_dispatch:
+    inputs:
+      start_date:
+        description: 'Start date (YYYY-MM-DD, default: 1 year ago)'
+        required: false
+        default: ''
+      end_date:
+        description: 'End date (YYYY-MM-DD, default: today)'
+        required: false
+        default: ''
+  schedule:
+    - cron: '0 2 1 * *'  # 1st of every month at 02:00 UTC
+
+concurrency:
+  group: backtest
+  cancel-in-progress: false
+
+permissions:
+  contents: write  # for committing report to docs/
+
+env:
+  CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+  CLOUDFLARE_D1_DATABASE_ID: ${{ secrets.CLOUDFLARE_D1_DATABASE_ID }}
+  CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+
+jobs:
+  backtest:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install deps
+        run: |
+          pip install uv --quiet
+          uv pip install --system -r requirements.lock --quiet
+
+      - name: Compute date range
+        id: dates
+        run: |
+          START="${{ github.event.inputs.start_date }}"
+          END="${{ github.event.inputs.end_date }}"
+          if [ -z "$START" ]; then
+            START=$(date -d '1 year ago' '+%Y-%m-%d' 2>/dev/null || date -v-1y '+%Y-%m-%d')
+          fi
+          if [ -z "$END" ]; then
+            END=$(date '+%Y-%m-%d')
+          fi
+          echo "start=$START" >> $GITHUB_OUTPUT
+          echo "end=$END" >> $GITHUB_OUTPUT
+
+      - name: Run backtest
+        run: |
+          python -m fichajes_bot.backtesting.runner \
+            --start ${{ steps.dates.outputs.start }} \
+            --end ${{ steps.dates.outputs.end }}
+        continue-on-error: false
+
+      - name: Check regression guard
+        run: python -m fichajes_bot.backtesting.regression_guard
+        continue-on-error: true  # informational only, not blocking
+
+      - name: Move report to docs/
+        run: |
+          mkdir -p docs/backtests
+          cp scripts/backtest_report_*.md docs/backtests/ 2>/dev/null || true
+          cp docs/backtest_plots/*.png docs/backtests/ 2>/dev/null || true
+
+      - name: Commit backtest artifacts
+        run: |
+          git config user.name "Backtest Bot"
+          git config user.email "bot@fichajes-bot.local"
+          git add docs/backtests/ scripts/backtest_report_*.md
+          git diff --staged --quiet || git commit -m "chore: backtest report $(date +%Y-%m-%d)"
+          git push
