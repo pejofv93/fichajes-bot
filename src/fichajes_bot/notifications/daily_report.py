@@ -90,7 +90,8 @@ async def generate_daily_report(d1: D1Client) -> str:
     """)
 
     cantera_rows = await d1.execute("""
-        SELECT nombre_canonico, score_smoothed, entidad, flags
+        SELECT jugador_id, nombre_canonico, score_smoothed, entidad,
+               flags, factores_actuales
         FROM jugadores
         WHERE entidad IN ('castilla', 'juvenil_a')
           AND score_smoothed >= 0.3
@@ -98,14 +99,7 @@ async def generate_daily_report(d1: D1Client) -> str:
         ORDER BY entidad, score_smoothed DESC LIMIT 15
     """)
 
-    cedidos_rows = await d1.execute("""
-        SELECT nombre_canonico, score_smoothed, entidad, flags
-        FROM jugadores
-        WHERE entidad = 'cedido'
-          AND score_smoothed >= 0.3
-          AND is_active = 1
-        ORDER BY score_smoothed DESC LIMIT 5
-    """)
+    # cedidos_rows is now fetched later with rendimiento_cedidos JOIN
 
     try:
         retractados = await d1.execute("""
@@ -157,22 +151,51 @@ async def generate_daily_report(d1: D1Client) -> str:
 
     castilla = [r for r in cantera_rows if r.get("entidad") == "castilla"]
     juvenil = [r for r in cantera_rows if r.get("entidad") == "juvenil_a"]
-    has_cantera = castilla or juvenil or cedidos_rows
+
+    # Fetch cedidos with rendimiento metrics
+    cedidos_with_metrics = await d1.execute("""
+        SELECT j.nombre_canonico, j.score_smoothed, j.entidad,
+               rc.club_cesion, rc.partidos, rc.minutos, rc.goles,
+               rc.asistencias, rc.rating_medio
+        FROM jugadores j
+        LEFT JOIN rendimiento_cedidos rc ON j.jugador_id = rc.jugador_id
+        WHERE j.entidad = 'cedido' AND j.is_active = 1
+          AND j.score_smoothed >= 0.3
+        ORDER BY rc.rating_medio DESC NULLS LAST LIMIT 5
+    """)
+
+    # Top cantera candidates
+    top_castilla = castilla[:5]
+    top_juvenil = juvenil[:3]
+
+    # Show cantera section if any players exist; cedidos subsection only with metrics
+    has_cantera = bool(top_castilla or top_juvenil or cedidos_with_metrics)
 
     if has_cantera:
         lines.append("⭐ *CANTERA*")
-        if castilla:
-            lines.append("_Castilla:_")
-            for i, r in enumerate(castilla[:5]):
+        if top_castilla:
+            lines.append("_Castilla (top 5 con movimientos):_")
+            for i, r in enumerate(top_castilla):
+                factores = _parse_flags(r.get("factores_actuales"))
+                primer = round((factores.get("score_primer_equipo") or 0) * 100) if isinstance(factores, dict) else 0
+                line = _player_line(r, i)
+                if primer > 0:
+                    line += f" · 🎯debut:{primer}%"
+                lines.append(line)
+        if top_juvenil:
+            lines.append("_Juvenil A (top 3):_")
+            for i, r in enumerate(top_juvenil):
                 lines.append(_player_line(r, i))
-        if juvenil:
-            lines.append("_Juvenil A:_")
-            for i, r in enumerate(juvenil[:5]):
-                lines.append(_player_line(r, i))
-        if cedidos_rows:
-            lines.append("_Cedidos:_")
-            for i, r in enumerate(cedidos_rows):
-                lines.append(_player_line(r, i))
+        if cedidos_with_metrics:
+            lines.append("_Cedidos destacados:_")
+            for r in cedidos_with_metrics[:3]:
+                nombre = r.get("nombre_canonico") or "?"
+                club = r.get("club_cesion") or "?"
+                rating = r.get("rating_medio")
+                goles = r.get("goles") or 0
+                asist = r.get("asistencias") or 0
+                rating_str = f" ⭐{rating:.1f}" if rating else ""
+                lines.append(f"• *{nombre}* @ {club} · ⚽{goles} 🅰️{asist}{rating_str}")
         lines.append("")
 
     if retractados:
@@ -198,6 +221,6 @@ async def generate_daily_report(d1: D1Client) -> str:
     logger.info(
         f"Daily report generated: {len(fichajes)} fichajes, "
         f"{len(salidas)} salidas, "
-        f"{len(castilla) + len(juvenil) + len(cedidos_rows)} cantera entries"
+        f"{len(top_castilla) + len(top_juvenil) + len(cedidos_with_metrics)} cantera entries"
     )
     return "\n".join(lines)

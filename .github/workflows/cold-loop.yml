@@ -57,6 +57,10 @@ jobs:
         run: python -m fichajes_bot.jobs.score --full
         continue-on-error: false
 
+      - name: Cantera 3-way scoring (Castilla + Juvenil A + cedidos)
+        run: python -m fichajes_bot.jobs.score_cantera --entity all
+        continue-on-error: true
+
       - name: Send pending alerts
         run: python -m fichajes_bot.jobs.alert
         continue-on-error: true

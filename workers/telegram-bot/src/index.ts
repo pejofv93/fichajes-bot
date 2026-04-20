@@ -231,37 +231,53 @@ export default {
     });
 
     // ── /castilla ────────────────────────────────────────────────────
+    // Top 10 Castilla players with 3-way scores from factores_actuales
     bot.command("castilla", async (ctx) => {
       const rows = await env.DB.prepare(`
-        SELECT nombre_canonico, score_debut, score_fichaje_ext, score_salida, estado
-        FROM cantera_jugadores
-        WHERE nivel = 'castilla' AND estado = 'activo'
-        ORDER BY score_debut DESC LIMIT 10
+        SELECT nombre_canonico, posicion, edad, score_smoothed,
+               factores_actuales, entidad_actual
+        FROM jugadores
+        WHERE (entidad = 'castilla' OR entidad_actual = 'castilla')
+          AND is_active = 1
+        ORDER BY score_smoothed DESC LIMIT 10
       `).all();
 
       if (!rows.results.length) {
-        await ctx.reply("Sin datos de Castilla todavía. El scraper de cantera está en configuración.");
+        await ctx.reply("Sin datos de Castilla todavía.");
         return;
       }
 
+      const now = new Date().toLocaleDateString("es-ES", { day: "2-digit", month: "2-digit" });
       const lines = (rows.results as any[]).map((r, i) => {
-        const debut = Math.round((r.score_debut || 0) * 100);
-        return `${i + 1}. *${r.nombre_canonico}* — Debut primer equipo: ${debut}%`;
+        const f = parseJSON(r.factores_actuales);
+        const primer = Math.round((f.score_primer_equipo ?? 0) * 100);
+        const stays  = Math.round((f.score_castilla_stays  ?? 0) * 100);
+        const salida = Math.round((f.score_salida_o_cesion ?? 0) * 100);
+        const emPrimer = primer >= 40 ? "🟢" : primer >= 20 ? "🟡" : "🔴";
+        const emSalida = salida >= 50 ? "📤" : "🔄";
+        const pos = r.posicion ? ` · ${r.posicion}` : "";
+        const edad = r.edad ? ` (${r.edad}a)` : "";
+        return (
+          `${i + 1}. *${r.nombre_canonico}*${edad}${pos}\n` +
+          `   ${emPrimer} 1er equipo: ${primer}% · 🏟️ Castilla: ${stays}% · ${emSalida} Salida: ${salida}%`
+        );
       });
 
-      await ctx.reply(
-        `🏟️ *Real Madrid Castilla*\n━━━━━━━━━━━━━━━\n\n${lines.join("\n")}`,
-        { parse_mode: "Markdown" }
-      );
+      const msg = `🏟️ *CASTILLA · ${now}*\n━━━━━━━━━━━━━━━━━\n\n${lines.join("\n\n")}\n\n_🟢/🟡/🔴 debut · 📤 salida/cesión_`;
+      const chunks = splitMessage(msg);
+      for (const chunk of chunks) await ctx.reply(chunk, { parse_mode: "Markdown" });
     });
 
     // ── /juvenil ────────────────────────────────────────────────────
+    // Top 10 Juvenil A players with 3-way scores
     bot.command("juvenil", async (ctx) => {
       const rows = await env.DB.prepare(`
-        SELECT nombre_canonico, score_debut, edad, posicion
-        FROM cantera_jugadores
-        WHERE nivel = 'juvenil_a' AND estado = 'activo'
-        ORDER BY score_debut DESC LIMIT 10
+        SELECT nombre_canonico, posicion, edad, score_smoothed,
+               factores_actuales, entidad_actual
+        FROM jugadores
+        WHERE (entidad = 'juvenil_a' OR entidad_actual = 'juvenil_a')
+          AND is_active = 1
+        ORDER BY score_smoothed DESC LIMIT 10
       `).all();
 
       if (!rows.results.length) {
@@ -269,27 +285,38 @@ export default {
         return;
       }
 
+      const now = new Date().toLocaleDateString("es-ES", { day: "2-digit", month: "2-digit" });
       const lines = (rows.results as any[]).map((r, i) => {
-        const debut = Math.round((r.score_debut || 0) * 100);
+        const f = parseJSON(r.factores_actuales);
+        const primer = Math.round((f.score_primer_equipo ?? 0) * 100);
+        const stays  = Math.round((f.score_castilla_stays  ?? 0) * 100);
+        const salida = Math.round((f.score_salida_o_cesion ?? 0) * 100);
+        const emPrimer = primer >= 40 ? "🟢" : primer >= 20 ? "🟡" : "🔴";
+        const emSalida = salida >= 50 ? "📤" : "🔄";
+        const pos = r.posicion ? ` · ${r.posicion}` : "";
         const edad = r.edad ? ` (${r.edad}a)` : "";
-        return `${i + 1}. *${r.nombre_canonico}*${edad} · ${r.posicion || "?"} — ${debut}%`;
+        return (
+          `${i + 1}. *${r.nombre_canonico}*${edad}${pos}\n` +
+          `   ${emPrimer} Castilla/1er: ${primer}% · 🏅 Juvenil: ${stays}% · ${emSalida} Salida: ${salida}%`
+        );
       });
 
-      await ctx.reply(
-        `⭐ *Juvenil A — Talentos*\n━━━━━━━━━━━━━━━\n\n${lines.join("\n")}`,
-        { parse_mode: "Markdown" }
-      );
+      const msg = `⭐ *JUVENIL A · ${now}*\n━━━━━━━━━━━━━━━━━\n\n${lines.join("\n\n")}\n\n_🟢/🟡/🔴 ascenso · 📤 salida/cesión_`;
+      const chunks = splitMessage(msg);
+      for (const chunk of chunks) await ctx.reply(chunk, { parse_mode: "Markdown" });
     });
 
     // ── /debut_watch ─────────────────────────────────────────────────
+    // Top 5 candidates for first-team debut sorted by score_primer_equipo
     bot.command("debut_watch", async (ctx) => {
       const rows = await env.DB.prepare(`
-        SELECT nombre_canonico, score_smoothed, entidad, posicion, edad
+        SELECT nombre_canonico, posicion, edad, score_smoothed,
+               factores_actuales, entidad, entidad_actual
         FROM jugadores
-        WHERE entidad IN ('castilla', 'juvenil_a')
-          AND score_smoothed >= 0.3
+        WHERE (entidad IN ('castilla', 'juvenil_a')
+               OR entidad_actual IN ('castilla', 'juvenil_a'))
           AND is_active = 1
-        ORDER BY score_smoothed DESC LIMIT 5
+        ORDER BY score_smoothed DESC LIMIT 30
       `).all();
 
       if (!rows.results.length) {
@@ -297,30 +324,51 @@ export default {
         return;
       }
 
-      const lines = (rows.results as any[]).map((r, i) => {
-        const pct = Math.round((r.score_smoothed || 0) * 100);
-        const em = pct >= 70 ? "🟢" : pct >= 40 ? "🟡" : "🔴";
-        const nivel = r.entidad === "castilla" ? "Castilla" : "Juvenil A";
+      // Sort by score_primer_equipo from factores_actuales, take top 5
+      const sorted = (rows.results as any[])
+        .map(r => ({ ...r, _f: parseJSON(r.factores_actuales) }))
+        .sort((a, b) => (b._f.score_primer_equipo ?? 0) - (a._f.score_primer_equipo ?? 0))
+        .slice(0, 5);
+
+      const next = new Date();
+      next.setDate(next.getDate() + (6 - next.getDay() + 6) % 7 + 1); // next weekend
+      const nextStr = next.toLocaleDateString("es-ES", { weekday: "short", day: "2-digit", month: "2-digit" });
+
+      const lines = sorted.map((r, i) => {
+        const primer = Math.round((r._f.score_primer_equipo ?? 0) * 100);
+        const em = primer >= 50 ? "🟢" : primer >= 30 ? "🟡" : "🔴";
+        const nivel = (r.entidad_actual || r.entidad) === "castilla" ? "Castilla" : "Juvenil A";
         const pos = r.posicion ? ` · ${r.posicion}` : "";
         const edad = r.edad ? ` (${r.edad}a)` : "";
-        return `${i + 1}. ${em} *${r.nombre_canonico}*${edad}${pos} [${nivel}] — ${pct}%`;
+        return `${i + 1}. 🎯 *${r.nombre_canonico}*${edad}${pos} [${nivel}]\n   ${em} Debut 1er equipo: ${primer}%`;
       });
 
-      await ctx.reply(
-        `🌟 *DEBUT WATCH — Próximos 5 candidatos*\n━━━━━━━━━━━━━━━\n\n${lines.join("\n")}\n\n_Probabilidad estimada de debut en primer equipo_`,
-        { parse_mode: "Markdown" }
-      );
+      const msg = [
+        `🎯 *DEBUT WATCH — Top 5 candidatos*`,
+        `━━━━━━━━━━━━━━━━━`,
+        ``,
+        lines.join("\n\n"),
+        ``,
+        `_Próximo partido relevante: ${nextStr}_`,
+        `_/castilla o /juvenil para ver todos los 3 scores_`,
+      ].join("\n");
+
+      const chunks = splitMessage(msg);
+      for (const chunk of chunks) await ctx.reply(chunk, { parse_mode: "Markdown" });
     });
 
     // ── /cedidos ────────────────────────────────────────────────────
+    // Cedidos list with season metrics from rendimiento_cedidos
     bot.command("cedidos", async (ctx) => {
       const rows = await env.DB.prepare(`
-        SELECT cj.nombre_canonico, c.club_cesion, c.liga_cesion,
-               c.probabilidad_retorno, c.probabilidad_venta, c.opcion_compra_m
-        FROM cedidos c
-        JOIN cantera_jugadores cj ON c.jugador_id = cj.jugador_id
-        WHERE c.activa = 1
-        ORDER BY c.probabilidad_retorno DESC LIMIT 10
+        SELECT j.nombre_canonico, j.posicion, j.edad,
+               rc.club_cesion, rc.temporada,
+               rc.partidos, rc.minutos, rc.goles, rc.asistencias,
+               rc.rating_medio, rc.lesion_larga, rc.actualizado_at
+        FROM jugadores j
+        LEFT JOIN rendimiento_cedidos rc ON j.jugador_id = rc.jugador_id
+        WHERE j.entidad = 'cedido' AND j.is_active = 1
+        ORDER BY rc.rating_medio DESC NULLS LAST LIMIT 15
       `).all();
 
       if (!rows.results.length) {
@@ -329,16 +377,33 @@ export default {
       }
 
       const lines = (rows.results as any[]).map((r, i) => {
-        const ret = Math.round((r.probabilidad_retorno || 0) * 100);
-        const venta = Math.round((r.probabilidad_venta || 0) * 100);
-        const compra = r.opcion_compra_m ? ` · OC: ${(r.opcion_compra_m / 1e6).toFixed(0)}M€` : "";
-        return `${i + 1}. *${r.nombre_canonico}* @ ${r.club_cesion}${compra}\n   Retorno: ${ret}% · Venta: ${venta}%`;
+        const club = r.club_cesion || "club desconocido";
+        const partidos = r.partidos ?? "?";
+        const minutos  = r.minutos  ?? "?";
+        const goles    = r.goles    ?? "?";
+        const asist    = r.asistencias ?? "?";
+        const rating   = r.rating_medio != null ? r.rating_medio.toFixed(1) : "?";
+        const lesion   = r.lesion_larga ? " ⚕️" : "";
+        const emRating = r.rating_medio != null
+          ? (r.rating_medio >= 7.5 ? "🟢" : r.rating_medio >= 6.5 ? "🟡" : "🔴")
+          : "⚪";
+        return (
+          `${i + 1}. ${emRating} *${r.nombre_canonico}*${lesion} @ ${club}\n` +
+          `   ${partidos}p · ${minutos}' · ⚽${goles} · 🅰️${asist} · ⭐${rating}`
+        );
       });
 
-      await ctx.reply(
-        `🔄 *Cedidos RM*\n━━━━━━━━━━━━━━━\n\n${lines.join("\n\n")}`,
-        { parse_mode: "Markdown" }
-      );
+      const msg = [
+        `🔄 *CEDIDOS RM — Temporada actual*`,
+        `━━━━━━━━━━━━━━━━━`,
+        ``,
+        lines.join("\n\n"),
+        ``,
+        `_🟢 rating ≥7.5 · 🟡 ≥6.5 · 🔴 <6.5 · ⚕️ lesionado_`,
+      ].join("\n");
+
+      const chunks = splitMessage(msg);
+      for (const chunk of chunks) await ctx.reply(chunk, { parse_mode: "Markdown" });
     });
 
     // ── /economia ────────────────────────────────────────────────────

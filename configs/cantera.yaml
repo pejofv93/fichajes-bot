@@ -1,0 +1,23 @@
+# configs/cantera.yaml — per-entity cantera scoring configuration
+# Optional override for built-in defaults in entity_config.py
+
+castilla:
+  edad_max: 23
+  tipo_operaciones: [FICHAJE, CESION, SALIDA, PROMOCION]
+  umbral_alerta: 0.5
+
+juvenil_a:
+  edad_max: 19
+  tipo_operaciones: [FICHAJE_JUVENIL, PROMOCION_CASTILLA, CESION]
+  umbral_alerta: 0.4
+
+cedidos:
+  edad_max: 27
+  tipo_operaciones: [CESION, FICHAJE]
+  umbral_alerta: 0.6
+  tracking:
+    minutos: true
+    goles: true
+    asistencias: true
+    rating: true
+    lesiones: true
