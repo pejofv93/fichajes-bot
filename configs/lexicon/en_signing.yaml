@@ -1,9 +1,12 @@
-# English lexicon — SIGNING operation (fichaje)
+# English lexicon — SIGNING (fichaje) + RENEWAL operations
+# periodista_id: optional — Romano's "here we go" gets a specific entry
 
 frases:
+  # ── Fase 6 — Confirmed ──────────────────────────────────────────────────
   - frase: "here we go"
     fase: 6
     peso: 0.98
+    periodista_id: fabrizio-romano
   - frase: "done deal"
     fase: 6
     peso: 0.97
@@ -19,16 +22,36 @@ frases:
   - frase: "move confirmed"
     fase: 6
     peso: 0.96
+  - frase: "transfer completed"
+    fase: 6
+    peso: 0.99
+  - frase: "officially announced"
+    fase: 6
+    peso: 0.99
+  - frase: "deal confirmed"
+    fase: 6
+    peso: 0.97
+  - frase: "joins real madrid"
+    fase: 6
+    peso: 0.99
+  - frase: "announced as new signing"
+    fase: 6
+    peso: 0.99
+
+  # ── Fase 5 — Imminent ────────────────────────────────────────────────────
   - frase: "medical scheduled"
     fase: 5
     peso: 0.93
   - frase: "medical tomorrow"
     fase: 5
     peso: 0.94
+  - frase: "medical completed"
+    fase: 5
+    peso: 0.95
   - frase: "will undergo medical"
     fase: 5
     peso: 0.93
-  - frase: "on his way to Madrid"
+  - frase: "on his way to madrid"
     fase: 5
     peso: 0.92
   - frase: "agreement reached"
@@ -40,6 +63,23 @@ frases:
   - frase: "release clause activated"
     fase: 5
     peso: 0.92
+  - frase: "transfer agreed"
+    fase: 5
+    peso: 0.88
+  - frase: "deal agreed"
+    fase: 5
+    peso: 0.87
+  - frase: "in madrid to sign"
+    fase: 5
+    peso: 0.95
+  - frase: "travelling to madrid"
+    fase: 5
+    peso: 0.90
+  - frase: "passed medical"
+    fase: 5
+    peso: 0.96
+
+  # ── Fase 4 — Personal agreement ──────────────────────────────────────────
   - frase: "fee agreed"
     fase: 4
     peso: 0.82
@@ -58,16 +98,27 @@ frases:
   - frase: "exclusive negotiations"
     fase: 4
     peso: 0.75
-  - frase: "Real Madrid close to signing"
+  - frase: "real madrid close to signing"
     fase: 4
     peso: 0.72
+  - frase: "close to a deal"
+    fase: 4
+    peso: 0.72
+  - frase: "offer accepted"
+    fase: 4
+    peso: 0.82
+  - frase: "price agreed"
+    fase: 4
+    peso: 0.80
+
+  # ── Fase 3 — Negotiations ────────────────────────────────────────────────
   - frase: "in advanced talks"
     fase: 3
     peso: 0.65
   - frase: "formal offer submitted"
     fase: 3
     peso: 0.65
-  - frase: "Real Madrid preparing offer"
+  - frase: "real madrid preparing offer"
     fase: 3
     peso: 0.60
   - frase: "bid rejected"
@@ -76,15 +127,81 @@ frases:
   - frase: "improved offer submitted"
     fase: 3
     peso: 0.62
-  - frase: "Real Madrid have made contact"
+  - frase: "second bid"
+    fase: 3
+    peso: 0.60
+  - frase: "negotiations ongoing"
+    fase: 3
+    peso: 0.62
+  - frase: "talks ongoing"
+    fase: 3
+    peso: 0.58
+  - frase: "serious negotiations"
+    fase: 3
+    peso: 0.65
+  - frase: "opening talks"
+    fase: 3
+    peso: 0.55
+
+  # ── Fase 2 — Contacts ────────────────────────────────────────────────────
+  - frase: "real madrid have made contact"
     fase: 2
     peso: 0.50
-  - frase: "Real Madrid want"
+  - frase: "real madrid want"
     fase: 2
     peso: 0.42
-  - frase: "Real Madrid are interested"
+  - frase: "real madrid are tracking"
+    fase: 2
+    peso: 0.38
+  - frase: "real madrid are monitoring"
+    fase: 2
+    peso: 0.38
+  - frase: "agent held talks"
+    fase: 2
+    peso: 0.48
+  - frase: "contact made"
+    fase: 2
+    peso: 0.48
+
+  # ── Fase 1 — Interest ────────────────────────────────────────────────────
+  - frase: "real madrid are interested"
     fase: 1
     peso: 0.35
-  - frase: "Real Madrid are tracking"
+  - frase: "on real madrid's radar"
+    fase: 1
+    peso: 0.30
+  - frase: "real madrid eyeing"
     fase: 1
     peso: 0.32
+  - frase: "identified as a target"
+    fase: 1
+    peso: 0.30
+  - frase: "long-term target"
+    fase: 1
+    peso: 0.28
+
+  # ── Renewal ──────────────────────────────────────────────────────────────
+  - frase: "contract extension"
+    fase: 5
+    tipo: RENOVACION
+    peso: 0.85
+  - frase: "new deal signed"
+    fase: 6
+    tipo: RENOVACION
+    peso: 0.96
+  - frase: "renewal confirmed"
+    fase: 6
+    tipo: RENOVACION
+    peso: 0.95
+  - frase: "signs new contract"
+    fase: 6
+    tipo: RENOVACION
+    peso: 0.95
+  - frase: "extends contract"
+    fase: 6
+    tipo: RENOVACION
+    peso: 0.94
+  - frase: "will renew"
+    fase: 3
+    tipo: RENOVACION
+    peso: 0.65

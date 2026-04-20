@@ -20,22 +20,36 @@ class LexiconMatcher:
         self._loaded = False
 
     def load_from_list(self, entries: list[dict]) -> None:
-        """Load from a list of dicts (e.g. from DB rows)."""
-        self._entries_by_frase = {}
+        """Load from a list of dicts (e.g. from DB rows).
+
+        Keyed by (frase, idioma) to preserve per-language entries for the same phrase.
+        """
+        # Internal: list of all entries for fast linear scan
+        self._all_entries: list[dict] = []
+        # Also keep frase→list[entry] for Aho-Corasick callback
+        self._entries_by_frase = {}  # kept for backward-compat; maps frase → last entry
+
         try:
             import ahocorasick  # type: ignore[import]
             A = ahocorasick.Automaton()
+            # Aho-Corasick: frase → list of entries (all languages for same frase)
+            frase_to_entries: dict[str, list[dict]] = {}
             for e in entries:
                 frase = e.get("frase", "").lower()
-                if frase:
-                    A.add_word(frase, e)
-                    self._entries_by_frase[frase] = e
+                if not frase:
+                    continue
+                frase_to_entries.setdefault(frase, []).append(e)
+                self._entries_by_frase[frase] = e  # last wins (backward compat)
+            for frase, elist in frase_to_entries.items():
+                A.add_word(frase, elist)
             A.make_automaton()
             self._automaton = A
+            self._all_entries = list(entries)
             logger.debug(f"LexiconMatcher: Aho-Corasick loaded {len(entries)} entries")
         except ImportError:
             logger.debug("LexiconMatcher: pyahocorasick not available, using linear scan")
             self._automaton = None
+            self._all_entries = list(entries)
             for e in entries:
                 frase = e.get("frase", "").lower()
                 if frase:
@@ -44,28 +58,40 @@ class LexiconMatcher:
 
     def match(self, text: str, idioma: str = "es") -> list[dict]:
         """Return all lexicon entries found in *text* for *idioma*."""
-        if not self._loaded or not self._entries_by_frase:
+        if not self._loaded:
             return []
 
         lang2 = idioma[:2].lower() if idioma else "es"
         text_lower = text.lower()
         matches: list[dict] = []
-        seen_frases: set[str] = set()
+        # Deduplicate by (frase, idioma) key so same phrase in different languages
+        # can both match when appropriate.
+        seen: set[tuple[str, str]] = set()
 
         if self._automaton is not None:
-            for _, entry in self._automaton.iter(text_lower):
-                frase = entry.get("frase", "").lower()
-                entry_lang = (entry.get("idioma") or "")[:2].lower()
-                if entry_lang in (lang2, "") and frase not in seen_frases:
-                    matches.append(entry)
-                    seen_frases.add(frase)
-        else:
-            for frase, entry in self._entries_by_frase.items():
-                if frase in text_lower:
+            for _, elist in self._automaton.iter(text_lower):
+                # elist is a list[dict] for this frase
+                for entry in elist:
                     entry_lang = (entry.get("idioma") or "")[:2].lower()
-                    if entry_lang in (lang2, "") and frase not in seen_frases:
+                    if entry_lang not in (lang2, ""):
+                        continue
+                    key = (entry.get("frase", "").lower(), entry_lang)
+                    if key not in seen:
                         matches.append(entry)
-                        seen_frases.add(frase)
+                        seen.add(key)
+        else:
+            # Linear scan over _all_entries (preserves all per-language duplicates)
+            for entry in self._all_entries:
+                frase = entry.get("frase", "").lower()
+                if not frase or frase not in text_lower:
+                    continue
+                entry_lang = (entry.get("idioma") or "")[:2].lower()
+                if entry_lang not in (lang2, ""):
+                    continue
+                key = (frase, entry_lang)
+                if key not in seen:
+                    matches.append(entry)
+                    seen.add(key)
 
         return matches
 

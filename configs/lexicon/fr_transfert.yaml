@@ -1,10 +1,16 @@
-# French lexicon — Transfert phrases
+# French lexicon — Transfert (fichaje, salida, renovación)
 
 fichaje:
   - frase: "accord trouvé"
     fase: 5
     peso: 0.88
+  - frase: "accord entre clubs"
+    fase: 5
+    peso: 0.87
   - frase: "visite médicale"
+    fase: 5
+    peso: 0.93
+  - frase: "visite médicale prévue"
     fase: 5
     peso: 0.93
   - frase: "transfert confirmé"
@@ -13,35 +19,82 @@ fichaje:
   - frase: "contrat signé"
     fase: 6
     peso: 0.98
-  - frase: "le Real Madrid veut"
-    fase: 2
-    peso: 0.42
-  - frase: "offre formulée"
-    fase: 3
-    peso: 0.62
-  - frase: "accord entre clubs"
-    fase: 5
-    peso: 0.87
-  - frase: "accord personnel"
-    fase: 4
-    peso: 0.82
   - frase: "dossier bouclé"
     fase: 6
     peso: 0.95
+  - frase: "deal bouclé"
+    fase: 6
+    peso: 0.95
+  - frase: "officiellement signé"
+    fase: 6
+    peso: 0.99
   - frase: "en passe de signer"
     fase: 5
     peso: 0.88
+  - frase: "accord personnel"
+    fase: 4
+    peso: 0.82
+  - frase: "accord verbal"
+    fase: 4
+    peso: 0.78
+  - frase: "offre acceptée"
+    fase: 4
+    peso: 0.82
+  - frase: "offre formulée"
+    fase: 3
+    peso: 0.62
+  - frase: "négociations avancées"
+    fase: 3
+    peso: 0.65
+  - frase: "en discussions avancées"
+    fase: 3
+    peso: 0.65
+  - frase: "le real madrid veut"
+    fase: 2
+    peso: 0.42
+  - frase: "piste sérieuse"
+    fase: 2
+    peso: 0.50
+  - frase: "intérêt du real madrid"
+    fase: 1
+    peso: 0.35
 
 salida:
-  - frase: "ne renouvellera pas"
-    fase: 3
-    peso: 0.75
   - frase: "départ confirmé"
     fase: 6
     peso: 0.95
+  - frase: "ne renouvellera pas"
+    fase: 3
+    peso: 0.75
   - frase: "prêt confirmé"
     fase: 6
     peso: 0.94
   - frase: "mis sur le marché"
     fase: 3
     peso: 0.62
+  - frase: "en fin de contrat"
+    fase: 4
+    peso: 0.72
+  - frase: "hors des plans"
+    fase: 3
+    peso: 0.65
+  - frase: "transfert acté"
+    fase: 6
+    peso: 0.96
+  - frase: "vente conclue"
+    fase: 6
+    peso: 0.96
+
+renovacion:
+  - frase: "prolongation signée"
+    fase: 6
+    peso: 0.96
+  - frase: "renouvellement confirmé"
+    fase: 6
+    peso: 0.95
+  - frase: "nouveau contrat signé"
+    fase: 6
+    peso: 0.97
+  - frase: "prolongera son contrat"
+    fase: 4
+    peso: 0.72

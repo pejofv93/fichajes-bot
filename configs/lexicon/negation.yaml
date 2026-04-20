@@ -1,4 +1,5 @@
-# Negation patterns — reduce score significantly
+# Negation and denial patterns — reduce score significantly
+# peso: negative value applied to overall score
 
 patrones:
   es:
@@ -24,6 +25,14 @@ patrones:
       peso: -0.55
     - frase: "operación imposible"
       peso: -0.58
+    - frase: "negación rotunda"
+      peso: -0.75
+    - frase: "fuentes lo niegan"
+      peso: -0.62
+    - frase: "rotundamente falso"
+      peso: -0.80
+    - frase: "bulo"
+      peso: -0.75
 
   en:
     - frase: "no confirmed"
@@ -44,6 +53,14 @@ patrones:
       peso: -0.65
     - frase: "pulled out of talks"
       peso: -0.72
+    - frase: "officially denied"
+      peso: -0.80
+    - frase: "categorically denied"
+      peso: -0.85
+    - frase: "absolutely false"
+      peso: -0.80
+    - frase: "fake story"
+      peso: -0.75
 
   it:
     - frase: "smentito"
@@ -52,6 +69,10 @@ patrones:
       peso: -0.70
     - frase: "trattativa saltata"
       peso: -0.78
+    - frase: "nessun accordo"
+      peso: -0.65
+    - frase: "smentita ufficiale"
+      peso: -0.80
 
   de:
     - frase: "dementiert"
@@ -60,6 +81,10 @@ patrones:
       peso: -0.70
     - frase: "deal geplatzt"
       peso: -0.78
+    - frase: "keine einigung"
+      peso: -0.65
+    - frase: "offiziell dementiert"
+      peso: -0.80
 
   fr:
     - frase: "démenti"
@@ -68,3 +93,9 @@ patrones:
       peso: -0.75
     - frase: "affaire n'aboutira pas"
       peso: -0.70
+    - frase: "officiellement démenti"
+      peso: -0.80
+    - frase: "faux"
+      peso: -0.62
+    - frase: "aucun accord"
+      peso: -0.65

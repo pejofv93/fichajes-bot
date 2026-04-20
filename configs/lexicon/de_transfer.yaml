@@ -1,4 +1,5 @@
-# German lexicon — Transfer phrases
+# German lexicon — Transfer (fichaje, salida, renovación)
+# Plettenberg-specific phrases marked with periodista_id
 
 fichaje:
   - frase: "einigung erzielt"
@@ -7,21 +8,26 @@ fichaje:
   - frase: "deal perfekt"
     fase: 6
     peso: 0.96
+    periodista_id: florian-plettenberg
+  - frase: "wechsel perfekt"
+    fase: 6
+    peso: 0.96
+  - frase: "transfer fix"
+    fase: 6
+    peso: 0.96
   - frase: "medizincheck"
     fase: 5
     peso: 0.93
   - frase: "unterschrift"
     fase: 6
     peso: 0.95
-  - frase: "transfer fix"
+  - frase: "vertragsunterschrift"
     fase: 6
-    peso: 0.96
-  - frase: "wechsel perfekt"
+    peso: 0.97
+  - frase: "deal perfekt gemacht"
     fase: 6
-    peso: 0.96
-  - frase: "interesse von real madrid"
-    fase: 1
-    peso: 0.35
+    peso: 0.97
+    periodista_id: florian-plettenberg
   - frase: "einig geworden"
     fase: 5
     peso: 0.87
@@ -31,17 +37,61 @@ fichaje:
   - frase: "ablösesumme vereinbart"
     fase: 4
     peso: 0.82
+  - frase: "gespräche laufen"
+    fase: 3
+    peso: 0.58
+  - frase: "interesse des real madrid"
+    fase: 1
+    peso: 0.35
+  - frase: "interesse von real madrid"
+    fase: 1
+    peso: 0.35
+  - frase: "verhandlungen laufen"
+    fase: 3
+    peso: 0.60
+  - frase: "mündliche einigung"
+    fase: 4
+    peso: 0.78
+  - frase: "angebot akzeptiert"
+    fase: 4
+    peso: 0.82
+  - frase: "offiziell"
+    fase: 6
+    peso: 0.99
 
 salida:
   - frase: "verlässt real madrid"
     fase: 5
     peso: 0.85
-  - frase: "vertrag läuft aus"
-    fase: 4
-    peso: 0.72
   - frase: "abgang fix"
     fase: 6
     peso: 0.94
   - frase: "kein neuer vertrag"
     fase: 4
     peso: 0.75
+  - frase: "vertrag läuft aus"
+    fase: 4
+    peso: 0.72
+  - frase: "wechsel beschlossen"
+    fase: 5
+    peso: 0.85
+  - frase: "transfer steht fest"
+    fase: 5
+    peso: 0.88
+  - frase: "nicht mehr in den planungen"
+    fase: 3
+    peso: 0.65
+  - frase: "auf dem transfermarkt"
+    fase: 2
+    peso: 0.42
+
+renovacion:
+  - frase: "vertrag verlängert"
+    fase: 6
+    peso: 0.95
+  - frase: "neue vertrag unterschrieben"
+    fase: 6
+    peso: 0.96
+  - frase: "verlängerung bestätigt"
+    fase: 6
+    peso: 0.95

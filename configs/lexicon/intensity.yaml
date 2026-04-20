@@ -1,4 +1,5 @@
-# Intensity modifiers — amplify the base weight
+# Intensity modifiers — amplify or reduce the base weight
+# amplificador: added to confidence score (can be negative)
 
 modificadores:
   positivos:
@@ -11,6 +12,18 @@ modificadores:
     - frase: "inminente"
       idioma: es
       amplificador: 0.18
+    - frase: "oficial"
+      idioma: es
+      amplificador: 0.20
+    - frase: "fuentes directas"
+      idioma: es
+      amplificador: 0.12
+    - frase: "fuente fiable"
+      idioma: es
+      amplificador: 0.12
+    - frase: "de primera mano"
+      idioma: es
+      amplificador: 0.15
     - frase: "breaking"
       idioma: en
       amplificador: 0.15
@@ -23,15 +36,34 @@ modificadores:
     - frase: "scoop"
       idioma: en
       amplificador: 0.12
+    - frase: "direct sources"
+      idioma: en
+      amplificador: 0.12
+    - frase: "reliable sources"
+      idioma: en
+      amplificador: 0.12
+    - frase: "i understand"
+      idioma: en
+      amplificador: 0.18
+      periodista_id: david-ornstein
     - frase: "ufficiale"
       idioma: it
       amplificador: 0.20
+    - frase: "esclusiva"
+      idioma: it
+      amplificador: 0.15
     - frase: "offizielle"
       idioma: de
       amplificador: 0.20
+    - frase: "exklusiv"
+      idioma: de
+      amplificador: 0.15
     - frase: "officiel"
       idioma: fr
       amplificador: 0.20
+    - frase: "exclusif"
+      idioma: fr
+      amplificador: 0.15
     - frase: "filtración"
       idioma: es
       amplificador: 0.10
@@ -55,3 +87,21 @@ modificadores:
     - frase: "speculation"
       idioma: en
       amplificador: -0.08
+    - frase: "supuestamente"
+      idioma: es
+      amplificador: -0.07
+    - frase: "reportedly"
+      idioma: en
+      amplificador: -0.07
+    - frase: "voz"
+      idioma: es
+      amplificador: -0.05
+    - frase: "si dice"
+      idioma: it
+      amplificador: -0.07
+    - frase: "angeblich"
+      idioma: de
+      amplificador: -0.07
+    - frase: "semble"
+      idioma: fr
+      amplificador: -0.06

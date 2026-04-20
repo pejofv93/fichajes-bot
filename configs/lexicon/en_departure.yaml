@@ -1,39 +1,130 @@
-# English lexicon — DEPARTURE operation (salida)
+# English lexicon — DEPARTURE + LOAN operations
 
 frases:
+  # ── Fase 6 — Confirmed ──────────────────────────────────────────────────
   - frase: "sale agreed"
     fase: 6
+    tipo: SALIDA
     peso: 0.95
-  - frase: "exit agreed"
-    fase: 5
-    peso: 0.88
-  - frase: "loan agreed"
-    fase: 5
-    peso: 0.90
-  - frase: "on loan to"
-    fase: 5
-    peso: 0.88
+  - frase: "exit confirmed"
+    fase: 6
+    tipo: SALIDA
+    peso: 0.97
+  - frase: "sold to"
+    fase: 6
+    tipo: SALIDA
+    peso: 0.98
+  - frase: "leaves real madrid"
+    fase: 6
+    tipo: SALIDA
+    peso: 0.95
+
+  # ── Fase 5 — Imminent ────────────────────────────────────────────────────
   - frase: "contract not renewed"
     fase: 5
+    tipo: SALIDA
     peso: 0.88
+  - frase: "exit agreed"
+    fase: 5
+    tipo: SALIDA
+    peso: 0.87
   - frase: "will leave"
     fase: 4
+    tipo: SALIDA
     peso: 0.75
+  - frase: "transfer fee agreed"
+    fase: 5
+    tipo: SALIDA
+    peso: 0.85
+  - frase: "parting ways"
+    fase: 5
+    tipo: SALIDA
+    peso: 0.85
+  - frase: "mutual termination"
+    fase: 5
+    tipo: SALIDA
+    peso: 0.88
+
+  # ── Fase 3-4 — Negotiations / Desire ────────────────────────────────────
   - frase: "leaving in the summer"
     fase: 3
+    tipo: SALIDA
+    peso: 0.65
+  - frase: "leaving in january"
+    fase: 3
+    tipo: SALIDA
     peso: 0.65
   - frase: "will not renew"
     fase: 3
+    tipo: SALIDA
     peso: 0.75
+  - frase: "has asked to leave"
+    fase: 3
+    tipo: SALIDA
+    peso: 0.72
   - frase: "not in plans"
     fase: 3
+    tipo: SALIDA
     peso: 0.65
   - frase: "not part of the manager plans"
     fase: 3
+    tipo: SALIDA
     peso: 0.68
   - frase: "put up for sale"
     fase: 3
+    tipo: SALIDA
     peso: 0.65
-  - frase: "has asked to leave"
+  - frase: "available for transfer"
     fase: 3
+    tipo: SALIDA
+    peso: 0.62
+  - frase: "listed for sale"
+    fase: 3
+    tipo: SALIDA
+    peso: 0.65
+  - frase: "out of contract"
+    fase: 4
+    tipo: SALIDA
     peso: 0.72
+  - frase: "contract expiring"
+    fase: 4
+    tipo: SALIDA
+    peso: 0.70
+  - frase: "running out of contract"
+    fase: 4
+    tipo: SALIDA
+    peso: 0.72
+  - frase: "his future is uncertain"
+    fase: 2
+    tipo: SALIDA
+    peso: 0.42
+
+  # ── Loan ─────────────────────────────────────────────────────────────────
+  - frase: "on loan to"
+    fase: 5
+    tipo: CESION
+    peso: 0.88
+  - frase: "loan agreed"
+    fase: 5
+    tipo: CESION
+    peso: 0.90
+  - frase: "loan confirmed"
+    fase: 6
+    tipo: CESION
+    peso: 0.95
+  - frase: "loan deal done"
+    fase: 6
+    tipo: CESION
+    peso: 0.95
+  - frase: "season-long loan"
+    fase: 5
+    tipo: CESION
+    peso: 0.88
+  - frase: "loan move agreed"
+    fase: 5
+    tipo: CESION
+    peso: 0.90
+  - frase: "buy option included"
+    fase: 4
+    tipo: CESION
+    peso: 0.75

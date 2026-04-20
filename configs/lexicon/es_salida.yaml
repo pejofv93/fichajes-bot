@@ -1,63 +1,166 @@
-# Léxico español — operación SALIDA (departure)
+# Léxico español — operación SALIDA (departure) y CESION
 
 frases:
+  # ── Salida — Fase 6 ─────────────────────────────────────────────────────
   - frase: "venta cerrada"
     fase: 6
+    tipo: SALIDA
     peso: 0.96
-  - frase: "cesión confirmada"
+  - frase: "salida confirmada"
     fase: 6
-    peso: 0.95
+    tipo: SALIDA
+    peso: 0.97
   - frase: "acuerdo para su venta"
     fase: 5
+    tipo: SALIDA
     peso: 0.88
   - frase: "rescisión acordada"
     fase: 5
+    tipo: SALIDA
     peso: 0.92
   - frase: "rescisión de contrato"
     fase: 5
+    tipo: SALIDA
     peso: 0.90
   - frase: "traspaso inminente"
     fase: 5
+    tipo: SALIDA
     peso: 0.87
   - frase: "salida libre"
     fase: 5
+    tipo: SALIDA
     peso: 0.85
   - frase: "sale libre en junio"
     fase: 4
+    tipo: SALIDA
+    peso: 0.80
+  - frase: "sale libre en enero"
+    fase: 4
+    tipo: SALIDA
     peso: 0.80
   - frase: "contrato no renovado"
     fase: 5
+    tipo: SALIDA
     peso: 0.88
-  - frase: "cedido al"
+  - frase: "contrato rescindido"
+    fase: 6
+    tipo: SALIDA
+    peso: 0.95
+  - frase: "libre en verano"
+    fase: 4
+    tipo: SALIDA
+    peso: 0.78
+  - frase: "transferencia cerrada"
+    fase: 6
+    tipo: SALIDA
+    peso: 0.95
+  - frase: "traspaso cerrado"
     fase: 5
-    peso: 0.85
+    tipo: SALIDA
+    peso: 0.90
+
+  # ── Salida — Fase 3-4 ────────────────────────────────────────────────────
   - frase: "no renovará"
     fase: 3
+    tipo: SALIDA
     peso: 0.75
   - frase: "ha pedido la salida"
     fase: 3
+    tipo: SALIDA
     peso: 0.72
+  - frase: "pide ser traspasado"
+    fase: 3
+    tipo: SALIDA
+    peso: 0.70
   - frase: "descartado por el Madrid"
     fase: 3
+    tipo: SALIDA
     peso: 0.65
   - frase: "no cuenta para Ancelotti"
     fase: 3
+    tipo: SALIDA
     peso: 0.70
   - frase: "fuera de los planes"
     fase: 3
+    tipo: SALIDA
     peso: 0.68
   - frase: "en la lista de ventas"
     fase: 3
+    tipo: SALIDA
     peso: 0.65
   - frase: "buscando equipo"
     fase: 3
+    tipo: SALIDA
     peso: 0.62
   - frase: "fin de contrato"
     fase: 4
+    tipo: SALIDA
     peso: 0.75
+  - frase: "final de contrato"
+    fase: 4
+    tipo: SALIDA
+    peso: 0.75
+  - frase: "no renovar"
+    fase: 3
+    tipo: SALIDA
+    peso: 0.72
+  - frase: "ruptura con el club"
+    fase: 3
+    tipo: SALIDA
+    peso: 0.62
+  - frase: "relación rota"
+    fase: 3
+    tipo: SALIDA
+    peso: 0.58
+
+  # ── Salida — Fase 1-2 ────────────────────────────────────────────────────
   - frase: "ofrecido a otros clubes"
     fase: 2
+    tipo: SALIDA
     peso: 0.50
   - frase: "quiere salir"
     fase: 2
+    tipo: SALIDA
     peso: 0.55
+  - frase: "podría salir"
+    fase: 2
+    tipo: SALIDA
+    peso: 0.42
+  - frase: "su futuro está en duda"
+    fase: 2
+    tipo: SALIDA
+    peso: 0.38
+  - frase: "está en el mercado"
+    fase: 2
+    tipo: SALIDA
+    peso: 0.45
+
+  # ── Cesión ──────────────────────────────────────────────────────────────
+  - frase: "cesión confirmada"
+    fase: 6
+    tipo: CESION
+    peso: 0.95
+  - frase: "cedido al"
+    fase: 5
+    tipo: CESION
+    peso: 0.85
+  - frase: "cedido a"
+    fase: 5
+    tipo: CESION
+    peso: 0.85
+  - frase: "préstamo confirmado"
+    fase: 6
+    tipo: CESION
+    peso: 0.94
+  - frase: "marcha cedido"
+    fase: 5
+    tipo: CESION
+    peso: 0.85
+  - frase: "opción de compra"
+    fase: 4
+    tipo: CESION
+    peso: 0.72
+  - frase: "préstamo de una temporada"
+    fase: 5
+    tipo: CESION
+    peso: 0.82

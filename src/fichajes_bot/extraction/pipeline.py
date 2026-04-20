@@ -22,6 +22,7 @@ from typing import Any, Optional
 
 from loguru import logger
 
+from fichajes_bot.calibration.reliability_manager import ReliabilityManager
 from fichajes_bot.extraction.confidence import THRESHOLD, compute_confidence, needs_llm
 from fichajes_bot.extraction.gemini_client import GeminiBudgetExceeded, GeminiClient
 from fichajes_bot.extraction.language_detect import detect as detect_language
@@ -40,6 +41,14 @@ class ExtractionPipeline:
         self._lexicon: Optional[LexiconMatcher] = None
         self._regex = RegexExtractor()
         self._gemini = GeminiClient(db)
+        # Reliability manager — lazy init, used by Session 5 scoring
+        self._reliability: Optional[ReliabilityManager] = None
+
+    async def get_reliability_manager(self) -> ReliabilityManager:
+        """Lazy-initialised ReliabilityManager for use by downstream sessions."""
+        if self._reliability is None:
+            self._reliability = ReliabilityManager(self.db)
+        return self._reliability
 
     # ── Lexicon (lazy, cached) ────────────────────────────────────────────────
 
