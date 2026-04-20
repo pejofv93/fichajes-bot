@@ -73,16 +73,61 @@ async def run(limit: int = 100) -> dict[str, int]:
         await metrics.upsert("rumores_procesados_hoy", str(n_total), float(n_total))
         await metrics.upsert("last_process_at", now)
 
-        # Reflect Gemini daily usage in the summary metric
         gemini_usage = await pipeline._gemini.get_daily_usage()
         await metrics.upsert("gemini_calls_hoy", str(gemini_usage), float(gemini_usage))
 
+        # ── Immediate recompute for urgent hard-signal events ─────────────────
+        n_urgent = await _process_urgent_events(db)
+        if n_urgent:
+            logger.info(f"process: {n_urgent} urgent events recomputed immediately")
+
         logger.info(
             f"process done | regex={n_regex} gemini={n_gemini} "
-            f"discarded={n_discarded} total_extracted={n_total}"
+            f"discarded={n_discarded} total_extracted={n_total} urgent={n_urgent}"
         )
 
         return {"regex": n_regex, "gemini": n_gemini, "discarded": n_discarded}
+
+
+async def _process_urgent_events(db) -> int:
+    """Immediately recompute scores for jugadores with urgent hard-signal events."""
+    from fichajes_bot.calibration.reliability_manager import ReliabilityManager
+    from fichajes_bot.scoring.engine import recompute_score
+
+    rows = await db.execute(
+        """SELECT payload FROM eventos_pending
+           WHERE tipo IN ('retraction', 'score_recompute_needed')
+             AND procesado = 0
+           ORDER BY created_at ASC""",
+    )
+
+    if not rows:
+        return 0
+
+    import json
+    reliability_manager = ReliabilityManager(db)
+    processed_ids: set[str] = set()
+    count = 0
+
+    for row in rows:
+        try:
+            payload = json.loads(row["payload"] or "{}")
+            jid = payload.get("jugador_id")
+            if jid and jid not in processed_ids:
+                processed_ids.add(jid)
+                await recompute_score(jid, db, reliability_manager)
+                count += 1
+        except Exception as exc:
+            logger.warning(f"urgent recompute error: {exc}")
+
+    # Mark all consumed
+    await db.execute(
+        """UPDATE eventos_pending
+           SET procesado=1, procesado_at=datetime('now')
+           WHERE tipo IN ('retraction', 'score_recompute_needed')
+             AND procesado=0"""
+    )
+    return count
 
 
 def main() -> None:

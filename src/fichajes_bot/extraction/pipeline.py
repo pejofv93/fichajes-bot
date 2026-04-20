@@ -43,6 +43,9 @@ class ExtractionPipeline:
         self._gemini = GeminiClient(db)
         # Reliability manager — lazy init, used by Session 5 scoring
         self._reliability: Optional[ReliabilityManager] = None
+        # Session 7 detectors — lazy init
+        self._retraction_handler = None
+        self._hard_signal_detector = None
 
     async def get_reliability_manager(self) -> ReliabilityManager:
         """Lazy-initialised ReliabilityManager for use by downstream sessions."""
@@ -114,6 +117,7 @@ class ExtractionPipeline:
                 tipo, idioma, conf, "regex",
             )
             await self._persist(result)
+            await self._post_process(result)
             return result
 
         # ── Step 7: Gemini fallback ───────────────────────────────────────────
@@ -122,13 +126,13 @@ class ExtractionPipeline:
             gemini_result = await self._gemini.extract(text, idioma)
         except GeminiBudgetExceeded as exc:
             logger.warning(f"Gemini budget exceeded: {exc}")
-            # Fall through to step 8
         except Exception as exc:
             logger.warning(f"Gemini unexpected error: {exc}")
 
         if gemini_result and gemini_result.get("es_real_madrid"):
             result = self._build_from_gemini(raw, gemini_result, lex_weight, idioma)
             await self._persist(result)
+            await self._post_process(result)
             return result
 
         # ── Step 8: Fallback — accept weak regex if tipo is known ─────────────
@@ -138,6 +142,7 @@ class ExtractionPipeline:
                 tipo, idioma, conf, "regex",
             )
             await self._persist(result)
+            await self._post_process(result)
             return result
 
         return None
@@ -208,6 +213,37 @@ class ExtractionPipeline:
             "club_destino": gr.get("club_destino"),
             "fecha_publicacion": raw.get("fecha_publicacion"),
         }
+
+    # ── Post-processing (Session 7 detectors) ────────────────────────────────
+
+    async def _post_process(self, result: dict[str, Any]) -> None:
+        """Run retraction detection and hard signal detection after extraction."""
+        from fichajes_bot.detectors.retraction_handler import RetractionHandler
+        from fichajes_bot.detectors.hard_signal_detector import HardSignalDetector
+
+        if self._retraction_handler is None:
+            self._retraction_handler = RetractionHandler(self.db)
+        if self._hard_signal_detector is None:
+            self._hard_signal_detector = HardSignalDetector(self.db)
+
+        # Retraction detection — only if there's an identified player
+        if result.get("jugador_id"):
+            try:
+                await self._retraction_handler.detect_retraction(result)
+            except Exception as exc:
+                logger.warning(f"RetractionHandler error: {exc}")
+
+        # Hard signal detection — sync regex, then async persist if found
+        tipo_señal = self._hard_signal_detector.detect(result)
+        if tipo_señal:
+            try:
+                await self._hard_signal_detector.persist_signal(
+                    rumor_id=result.get("rumor_id", ""),
+                    jugador_id=result.get("jugador_id"),
+                    tipo_señal=tipo_señal,
+                )
+            except Exception as exc:
+                logger.warning(f"HardSignalDetector persist error: {exc}")
 
     # ── Persistence ───────────────────────────────────────────────────────────
 
