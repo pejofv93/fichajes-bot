@@ -1,0 +1,47 @@
+[project]
+name = "fichajes-bot"
+version = "3.1.0"
+requires-python = ">=3.11"
+dependencies = [
+    "httpx>=0.27",
+    "feedparser>=6.0",
+    "atproto>=0.0.47",
+    "selectolax>=0.3.17",
+    "cf-d1-python>=0.1",
+    "pydantic>=2.0",
+    "google-generativeai>=0.5",
+    "pyahocorasick>=2.0",
+    "rapidfuzz>=3.0",
+    "loguru>=0.7",
+    "pyyaml>=6.0",
+    "tenacity>=8.0",
+    "python-dotenv>=1.0",
+    "ruff>=0.4",
+    "mypy>=1.10",
+    "pytest>=8.0",
+    "pytest-asyncio>=0.23",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/fichajes_bot"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+src = ["src"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP"]
+
+[tool.mypy]
+python_version = "3.11"
+ignore_missing_imports = true
+strict = false
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]

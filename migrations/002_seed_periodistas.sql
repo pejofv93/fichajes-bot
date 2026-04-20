@@ -1,0 +1,60 @@
+-- Seed: 50 periodistas tier S/A/B/C
+
+INSERT OR IGNORE INTO periodistas (periodista_id, nombre_completo, tier, medio_principal, idioma, reliability_global, alpha_global, beta_global, bluesky_handle) VALUES
+-- TIER S — máxima fiabilidad verificada
+('fabrizio-romano',    'Fabrizio Romano',       'S', 'The Guardian / relevo', 'en', 0.92, 12.0, 1.0, 'fabrizioromano.bsky.social'),
+('david-ornstein',     'David Ornstein',        'S', 'The Athletic',          'en', 0.88, 9.0,  1.2, 'davidornstein.bsky.social'),
+('gianluca-di-marzio', 'Gianluca Di Marzio',    'S', 'Sky Sport Italia',      'it', 0.85, 8.5,  1.5, NULL),
+('matteo-moretto',     'Matteo Moretto',        'S', 'Relevo',                'es', 0.84, 8.0,  1.5, NULL),
+('florian-plettenberg','Florian Plettenberg',   'S', 'Sky Sport DE',          'de', 0.82, 7.5,  1.6, NULL),
+('marca-rm-oficial',   'Real Madrid Oficial',   'S', 'realmadrid.com',        'es', 1.00, 50.0, 1.0, NULL),
+
+-- TIER A — alta fiabilidad
+('guillem-balague',    'Guillem Balagué',        'A', 'guillembalague.com',    'en', 0.72, 5.0,  2.0, NULL),
+('alfredo-relano',     'Alfredo Relaño',         'A', 'AS',                    'es', 0.68, 4.5,  2.1, NULL),
+('christian-falk',     'Christian Falk',         'A', 'Bild',                  'de', 0.75, 5.5,  1.9, NULL),
+('romeo-agresti',      'Romeo Agresti',          'A', 'Goal Italia',           'it', 0.73, 5.0,  1.8, NULL),
+('tancredi-palmeri',   'Tancredi Palmeri',       'A', 'TNT Sports',            'it', 0.71, 4.8,  1.9, NULL),
+('ben-jacobs',         'Ben Jacobs',             'A', 'CBS Sports',            'en', 0.74, 5.2,  1.9, 'benjacobs.bsky.social'),
+('jonathan-shrager',   'Jonathan Shrager',       'A', 'ESPN',                  'en', 0.70, 4.5,  2.0, NULL),
+('pedro-almeida',      'Pedro Almeida',          'A', 'Relevo',                'es', 0.71, 4.6,  1.9, NULL),
+('marca-digital',      'Marca Digital',          'A', 'Marca',                 'es', 0.68, 4.2,  2.0, NULL),
+('sport-digital',      'Sport Digital',          'A', 'Sport',                 'ca', 0.65, 3.8,  2.1, NULL),
+('lequipe-foot',       'L Equipe Football',      'A', 'L Equipe',              'fr', 0.73, 5.1,  1.9, NULL),
+('gazzetta-sport',     'Gazzetta dello Sport',   'A', 'Gazzetta',              'it', 0.70, 4.6,  2.0, NULL),
+('kicker-sport',       'Kicker Sport',           'A', 'Kicker',                'de', 0.72, 4.9,  1.9, NULL),
+('sky-sport-uk',       'Sky Sports News',        'A', 'Sky Sports',            'en', 0.74, 5.3,  1.9, NULL),
+('athletic-soccer',    'The Athletic Soccer',    'A', 'The Athletic',          'en', 0.78, 6.0,  1.7, NULL),
+('bbc-sport-football', 'BBC Sport Football',     'A', 'BBC Sport',             'en', 0.76, 5.8,  1.8, NULL),
+('goal-spain',         'Goal España',            'A', 'Goal',                  'es', 0.69, 4.4,  2.0, NULL),
+('marca-fichajes',     'Marcos Lopez (MARCA)',   'A', 'Marca',                 'es', 0.67, 4.0,  2.0, NULL),
+('relevo-rm',          'Relevo Real Madrid',     'A', 'Relevo',                'es', 0.74, 5.2,  1.9, NULL),
+
+-- TIER B — sesgo documentado o fiabilidad media
+('jose-felix-diaz',    'José Félix Díaz',        'B', 'Marca',                 'es', 0.62, 3.5,  2.1, NULL),
+('inda-roberto',       'Roberto Inda',           'B', 'Okdiario',              'es', 0.48, 2.0,  2.2, NULL),
+('edu-aguirre',        'Edu Aguirre',            'B', 'El Chiringuito',        'es', 0.45, 1.8,  2.2, NULL),
+('pedrerol-Josep',     'Josep Pedrerol',         'B', 'El Chiringuito',        'es', 0.42, 1.6,  2.2, NULL),
+('alfemio-sanz',       'Alfemio Sanz',           'B', 'Marca',                 'es', 0.60, 3.2,  2.1, NULL),
+('roncero-tomas',      'Tomás Roncero',          'B', 'AS',                    'es', 0.55, 2.8,  2.3, NULL),
+('mundodeportivo-ed',  'MD Editorial',           'B', 'Mundo Deportivo',       'es', 0.62, 3.5,  2.1, NULL),
+('sport-ed',           'Sport Editorial',        'B', 'Sport',                 'ca', 0.60, 3.2,  2.1, NULL),
+('cadena-ser-futbol',  'Cadena SER Fútbol',      'B', 'Cadena SER',            'es', 0.68, 4.3,  2.0, NULL),
+('albert-roge',        'Albert Rogé',            'B', 'Sport',                 'ca', 0.63, 3.6,  2.1, NULL),
+('javier-herraez',     'Javier Herráez',         'B', 'Cadena COPE',           'es', 0.65, 3.8,  2.0, NULL),
+('paco-garcia-caridad','Paco García Caridad',    'B', 'Cadena COPE',           'es', 0.62, 3.5,  2.1, NULL),
+('gerard-romero',      'Gerard Romero',          'B', 'Jijantes',              'es', 0.58, 3.0,  2.2, NULL),
+('ivan-villar',        'Ivan Villar',            'B', 'Fichajes.net',          'es', 0.50, 2.2,  2.2, NULL),
+('moises-llorens',     'Moisés Llorens',         'B', 'ESPN España',           'es', 0.66, 4.0,  2.0, NULL),
+
+-- TIER C — baja fiabilidad / tabloides
+('dailystar-sport',    'Daily Star Sport',       'C', 'Daily Star',            'en', 0.32, 1.2,  2.5, NULL),
+('dailymail-sport',    'Daily Mail Sport',       'C', 'Daily Mail',            'en', 0.38, 1.5,  2.4, NULL),
+('sun-football',       'The Sun Football',       'C', 'The Sun',               'en', 0.35, 1.3,  2.5, NULL),
+('mirror-sport',       'Mirror Sport',           'C', 'The Mirror',            'en', 0.40, 1.6,  2.4, NULL),
+('fichajes-net',       'Fichajes.net',           'C', 'fichajes.net',          'es', 0.42, 1.7,  2.3, NULL),
+('donbalon-ed',        'Don Balón',              'C', 'Don Balón',             'es', 0.30, 1.1,  2.6, NULL),
+('elgoldigital',       'El Gol Digital',         'C', 'El Gol Digital',        'es', 0.38, 1.5,  2.4, NULL),
+('todofichajes',       'Todofichajes',           'C', 'Todofichajes',          'es', 0.40, 1.6,  2.4, NULL),
+('transfermarkt-news', 'Transfermarkt News',     'C', 'Transfermarkt',         'de', 0.55, 2.8,  2.3, NULL),
+('bild-sport',         'Bild Sport',             'C', 'Bild',                  'de', 0.48, 2.0,  2.2, NULL);

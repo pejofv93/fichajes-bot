@@ -1,0 +1,130 @@
+# Léxico español — operación FICHAJE (signing in)
+# Fase: 1=interés inicial → 6=confirmado
+# peso_base: 0.0-1.0
+
+frases:
+  # Fase 6 — Confirmado
+  - frase: "aquí vamos"
+    fase: 6
+    peso: 0.98
+  - frase: "acuerdo total alcanzado"
+    fase: 6
+    peso: 0.95
+  - frase: "contrato firmado"
+    fase: 6
+    peso: 0.97
+  - frase: "ya es oficial"
+    fase: 6
+    peso: 0.99
+  - frase: "fichaje confirmado"
+    fase: 6
+    peso: 0.99
+  - frase: "compra confirmada"
+    fase: 6
+    peso: 0.99
+  - frase: "done deal"
+    fase: 6
+    peso: 0.97
+  - frase: "presentación prevista"
+    fase: 6
+    peso: 0.95
+  - frase: "convocado para la presentación"
+    fase: 6
+    peso: 0.98
+  - frase: "liberación de cláusula"
+    fase: 5
+    peso: 0.90
+
+  # Fase 5 — Acuerdo clubs / firma inminente
+  - frase: "acuerdo cerrado"
+    fase: 5
+    peso: 0.90
+  - frase: "trato cerrado"
+    fase: 5
+    peso: 0.88
+  - frase: "el Madrid ha llegado a un acuerdo"
+    fase: 5
+    peso: 0.88
+  - frase: "traspaso acordado"
+    fase: 5
+    peso: 0.90
+  - frase: "viaje para pasar el reconocimiento"
+    fase: 5
+    peso: 0.93
+  - frase: "revisión médica"
+    fase: 5
+    peso: 0.92
+  - frase: "pasa el médico mañana"
+    fase: 5
+    peso: 0.94
+  - frase: "en camino a Madrid"
+    fase: 5
+    peso: 0.90
+  - frase: "en Madrid para firmar"
+    fase: 5
+    peso: 0.95
+  - frase: "clausula de rescisión activada"
+    fase: 4
+    peso: 0.85
+
+  # Fase 4 — Acuerdo personal
+  - frase: "acuerdo personal alcanzado"
+    fase: 4
+    peso: 0.82
+  - frase: "acuerdo con el jugador"
+    fase: 4
+    peso: 0.80
+  - frase: "pendiente del acuerdo entre clubes"
+    fase: 4
+    peso: 0.75
+  - frase: "contraoferta enviada"
+    fase: 4
+    peso: 0.70
+  - frase: "cifra acordada"
+    fase: 4
+    peso: 0.78
+  - frase: "transfer fee agreed"
+    fase: 4
+    peso: 0.82
+
+  # Fase 3 — Negociaciones
+  - frase: "negociaciones avanzadas"
+    fase: 3
+    peso: 0.65
+  - frase: "oferta presentada"
+    fase: 3
+    peso: 0.62
+  - frase: "oferta formal"
+    fase: 3
+    peso: 0.65
+  - frase: "propuesta sobre la mesa"
+    fase: 3
+    peso: 0.60
+  - frase: "primera oferta rechazada"
+    fase: 3
+    peso: 0.55
+
+  # Fase 2 — Contactos
+  - frase: "contactos directos"
+    fase: 2
+    peso: 0.50
+  - frase: "el Real Madrid quiere"
+    fase: 2
+    peso: 0.45
+  - frase: "el Madrid sigue al jugador"
+    fase: 2
+    peso: 0.40
+  - frase: "sondeo del Real Madrid"
+    fase: 2
+    peso: 0.42
+
+  # Fase 1 — Interés inicial
+  - frase: "interés del Real Madrid"
+    fase: 1
+    peso: 0.35
+  - frase: "en la agenda del Madrid"
+    fase: 1
+    peso: 0.30
+  - frase: "Real Madrid apunta a"
+    fase: 1
+    peso: 0.32

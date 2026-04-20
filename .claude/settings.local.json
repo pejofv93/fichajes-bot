@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python3 -c ' *)",
+      "Bash(python -m pytest tests/test_session1.py::TestPrefilter -x -q)",
+      "Bash(pip install *)",
+      "Bash(python -m pytest tests/test_session1.py -x -q)",
+      "Bash(python *)",
+      "Bash(git init *)",
+      "Bash(git add *)"
+    ]
+  }
+}

@@ -1,0 +1,231 @@
+# configs/sources.yaml — fichajes-bot v3.1
+# Sources configuration. Sin snscrape. Sin Nitter. Sin Playwright.
+
+# ============================================================
+# TIER S — Periodistas de máxima fiabilidad
+# ============================================================
+
+- id: romano_bluesky
+  tipo: bluesky
+  tier: S
+  handle: fabrizioromano.bsky.social
+  periodista_id: fabrizio-romano
+  idioma: en
+  polling_minutes: 120
+  activo: true
+  nota: "Primary. Publica breaking news aquí con delay vs Twitter."
+
+- id: romano_rss_relevo
+  tipo: rss
+  tier: S
+  url: https://www.relevo.com/rss/autores/fabrizio-romano.xml
+  periodista_id: fabrizio-romano
+  idioma: es
+  polling_minutes: 120
+  nota: "Fallback si Bluesky no tiene el post todavía."
+
+- id: ornstein_bluesky
+  tipo: bluesky
+  tier: S
+  handle: davidornstein.bsky.social
+  periodista_id: david-ornstein
+  idioma: en
+  polling_minutes: 120
+
+- id: athletic_rss
+  tipo: rss
+  tier: S
+  url: https://www.nytimes.com/athletic/rss/soccer
+  idioma: en
+  polling_minutes: 120
+  nota: "The Athletic = Ornstein + varios tier-S internacionales."
+
+- id: relevo_rss
+  tipo: rss
+  tier: S
+  url: https://www.relevo.com/rss
+  periodista_id_filter: [matteo-moretto]
+  idioma: es
+  polling_minutes: 120
+
+- id: dimarzio_rss
+  tipo: rss
+  tier: S
+  url: https://www.gianlucadimarzio.com/en/feed
+  periodista_id: gianluca-di-marzio
+  idioma: it
+  polling_minutes: 120
+
+- id: skysport_de_rss
+  tipo: rss
+  tier: S
+  url: https://www.skysport.de/rss/transfernews
+  periodista_id_filter: [florian-plettenberg]
+  idioma: de
+  polling_minutes: 120
+
+- id: realmadrid_noticias_rss
+  tipo: rss
+  tier: S
+  url: https://www.realmadrid.com/rss/noticias
+  idioma: es
+  polling_minutes: 120
+  sesgo: oficial
+  factor_fichaje_positivo: 1.0
+
+# ============================================================
+# TIER A — Alta fiabilidad, cobertura regional sólida
+# ============================================================
+
+- id: relevo_general_rss
+  tipo: rss
+  tier: A
+  url: https://www.relevo.com/rss
+  idioma: es
+  sesgo: neutral
+  polling_minutes: 240
+
+- id: bbc_sport_rss
+  tipo: rss
+  tier: A
+  url: http://feeds.bbci.co.uk/sport/football/rss.xml
+  idioma: en
+  sesgo: neutral
+  polling_minutes: 240
+
+- id: lequipe_rss
+  tipo: rss
+  tier: A
+  url: https://www.lequipe.fr/rss/actu_rss.xml
+  idioma: fr
+  sesgo: neutral
+  polling_minutes: 240
+
+- id: gazzetta_rss
+  tipo: rss
+  tier: A
+  url: https://www.gazzetta.it/rss/Home.xml
+  idioma: it
+  sesgo: neutral
+  polling_minutes: 240
+
+- id: kicker_rss
+  tipo: rss
+  tier: A
+  url: https://newsfeed.kicker.de/news/aktuell
+  idioma: de
+  sesgo: neutral
+  polling_minutes: 240
+
+- id: balague_blog_rss
+  tipo: rss
+  tier: A
+  url: https://www.guillembalague.com/feed
+  periodista_id: guillem-balague
+  idioma: en
+  polling_minutes: 240
+
+# ============================================================
+# TIER B — Medios con sesgo documentado, peso reducido
+# ============================================================
+
+- id: marca_rss
+  tipo: rss
+  tier: B
+  url: https://e00-marca.uecdn.es/rss/portada.xml
+  idioma: es
+  sesgo: pro-rm
+  factor_fichaje_positivo: 0.75
+  factor_salida_positiva: 1.0
+  polling_minutes: 240
+
+- id: as_rss
+  tipo: rss
+  tier: B
+  url: https://as.com/rss/actualidad/portada.xml
+  idioma: es
+  sesgo: pro-rm
+  factor_fichaje_positivo: 0.70
+  factor_salida_positiva: 1.0
+  polling_minutes: 240
+
+- id: mundodeportivo_rss
+  tipo: rss
+  tier: B
+  url: https://www.mundodeportivo.com/rss/home.xml
+  idioma: es
+  sesgo: pro-barca
+  factor_fichaje_positivo: 0.90
+  factor_salida_positiva: 0.65
+  polling_minutes: 240
+
+- id: sport_rss
+  tipo: rss
+  tier: B
+  url: https://www.sport.es/es/rss/futbol/rss.xml
+  idioma: es
+  sesgo: pro-barca
+  factor_fichaje_positivo: 0.90
+  factor_salida_positiva: 0.60
+  polling_minutes: 240
+
+# ============================================================
+# WEB SCRAPING selectolax (sin Playwright)
+# Solo en cold-loop, frecuencia baja
+# ============================================================
+
+- id: transfermarkt_rm
+  tipo: web_selectolax
+  tier: A
+  url: https://www.transfermarkt.com/real-madrid/transfers/verein/418
+  idioma: en
+  polling_minutes: 720
+  rate_limit_seconds: 5
+
+- id: capology_rm
+  tipo: web_selectolax
+  tier: A
+  url: https://www.capology.com/club/real-madrid/salaries
+  idioma: en
+  polling_minutes: 10080
+
+- id: laliga_transparencia
+  tipo: web_selectolax
+  tier: S
+  url: https://www.laliga.com/transparencia/limites-coste-plantilla
+  idioma: es
+  polling_minutes: 10080
+
+# ============================================================
+# CANTERA
+# ============================================================
+
+- id: realmadrid_canteras_rss
+  tipo: rss
+  tier: S
+  url: https://www.realmadrid.com/rss/canteras
+  idioma: es
+  entidades: [castilla, juvenil_a]
+  polling_minutes: 240
+
+- id: canteradelrealmadrid_rss
+  tipo: rss
+  tier: A
+  url: https://canteradelrealmadrid.com/feed
+  idioma: es
+  entidades: [castilla, juvenil_a]
+  polling_minutes: 240
+
+- id: rfef_juv_web
+  tipo: web_selectolax
+  tier: S
+  url: https://www.rfef.es/competiciones/juvenil-division-honor
+  idioma: es
+  entidades: [juvenil_a]
+  polling_minutes: 1440
+
+# ELIMINADAS DEFINITIVAMENTE (no añadir nunca):
+# snscrape: muerto desde 2023
+# nitter: cerrado feb 2024
+# twitter_api: 92€/mes
+# playwright_sites: eliminado, MARCA/AS tienen RSS

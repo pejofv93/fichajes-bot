@@ -1,0 +1,43 @@
+# Phase classification rules
+# Used to determine the rumor phase from lexical signals
+
+phases:
+  6:
+    nombre: confirmado
+    keywords: ["aquí vamos", "here we go", "done deal", "contrato firmado", "ya es oficial",
+               "fumata bianca", "colpo fatto", "deal perfekt", "wechsel perfekt",
+               "transfert confirmé", "dossier bouclé"]
+    min_peso: 0.90
+
+  5:
+    nombre: acuerdo_clubs
+    keywords: ["acuerdo cerrado", "medical scheduled", "revisión médica", "visite mediche",
+               "medizincheck", "visite médicale", "agreement reached", "accordo trovato",
+               "einigung erzielt", "accord trouvé"]
+    min_peso: 0.80
+
+  4:
+    nombre: acuerdo_personal
+    keywords: ["acuerdo personal alcanzado", "personal terms agreed", "fee agreed",
+               "acuerdo con el jugador", "verbally agreed", "accord personnel",
+               "ablösesumme vereinbart"]
+    min_peso: 0.70
+
+  3:
+    nombre: negociaciones
+    keywords: ["negociaciones avanzadas", "in advanced talks", "oferta presentada",
+               "trattativa avanzata", "angebot eingereicht", "offre formulée",
+               "formal offer submitted"]
+    min_peso: 0.55
+
+  2:
+    nombre: contactos
+    keywords: ["contactos directos", "Real Madrid have made contact", "el Real Madrid quiere",
+               "Real Madrid want", "trattativa in corso", "le Real Madrid veut"]
+    min_peso: 0.40
+
+  1:
+    nombre: interes_inicial
+    keywords: ["interés del Real Madrid", "Real Madrid are interested", "interesse von real madrid",
+               "en la agenda del Madrid", "sondeo del Real Madrid"]
+    min_peso: 0.25

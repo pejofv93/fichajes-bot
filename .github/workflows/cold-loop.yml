@@ -1,0 +1,66 @@
+name: Cold Loop — Web scraping + modelo económico (cada 4h)
+
+on:
+  schedule:
+    - cron: '30 */4 * * *'  # desfasado 30min del hot-loop
+  workflow_dispatch:
+
+concurrency:
+  group: cold-loop
+  cancel-in-progress: false
+
+env:
+  CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+  CLOUDFLARE_D1_DATABASE_ID: ${{ secrets.CLOUDFLARE_D1_DATABASE_ID }}
+  CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+  GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+  TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+  TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+  BLUESKY_HANDLE: ${{ secrets.BLUESKY_HANDLE }}
+  BLUESKY_APP_PASSWORD: ${{ secrets.BLUESKY_APP_PASSWORD }}
+
+jobs:
+  cold-loop:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install deps
+        run: pip install uv --quiet && uv pip install --system -r requirements.lock --quiet
+
+      # Sin playwright install — eliminado definitivamente
+
+      - name: Scrape tier A/B/C RSS sources
+        run: python -m fichajes_bot.jobs.scrape --tier A,B,C
+        continue-on-error: true
+
+      - name: Web scraping (selectolax)
+        run: python -m fichajes_bot.jobs.scrape_web
+        continue-on-error: true
+
+      - name: Update modelo económico
+        run: python -m fichajes_bot.jobs.update_economic_model
+        continue-on-error: true
+
+      - name: Process all pending (incluye tier A/B/C)
+        run: python -m fichajes_bot.jobs.process --limit 300
+        continue-on-error: false
+
+      - name: Recompute scores + substitution propagation
+        run: python -m fichajes_bot.jobs.score --full
+        continue-on-error: false
+
+      - name: Send pending alerts
+        run: python -m fichajes_bot.jobs.alert
+        continue-on-error: true
+
+      - name: Record run metrics
+        if: always()
+        run: python -m fichajes_bot.jobs.metrics --job cold-loop

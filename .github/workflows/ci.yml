@@ -1,0 +1,34 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main, develop]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install deps
+        run: pip install uv && uv pip install --system -r requirements.lock
+
+      - name: Lint
+        run: ruff check src/ tests/
+
+      - name: Type check
+        run: mypy src/fichajes_bot --ignore-missing-imports
+
+      - name: Tests (con D1 emulado)
+        run: pytest tests/ -x -q
+        env:
+          D1_MODE: emulated
+          D1_EMULATED_PATH: ":memory:"

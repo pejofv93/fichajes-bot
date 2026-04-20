@@ -1,0 +1,70 @@
+# Negation patterns — reduce score significantly
+
+patrones:
+  es:
+    - frase: "no hay acuerdo"
+      peso: -0.60
+    - frase: "descartado"
+      peso: -0.55
+    - frase: "desmiente"
+      peso: -0.65
+    - frase: "no es verdad"
+      peso: -0.70
+    - frase: "fake news"
+      peso: -0.75
+    - frase: "totalmente falso"
+      peso: -0.80
+    - frase: "operación descartada"
+      peso: -0.62
+    - frase: "se cierra la puerta"
+      peso: -0.50
+    - frase: "lo desmiente"
+      peso: -0.65
+    - frase: "no hay nada"
+      peso: -0.55
+    - frase: "operación imposible"
+      peso: -0.58
+
+  en:
+    - frase: "no confirmed"
+      peso: -0.55
+    - frase: "denied"
+      peso: -0.65
+    - frase: "not happening"
+      peso: -0.70
+    - frase: "no agreement"
+      peso: -0.60
+    - frase: "deal off"
+      peso: -0.75
+    - frase: "move collapsed"
+      peso: -0.80
+    - frase: "talks have collapsed"
+      peso: -0.78
+    - frase: "has rejected"
+      peso: -0.65
+    - frase: "pulled out of talks"
+      peso: -0.72
+
+  it:
+    - frase: "smentito"
+      peso: -0.65
+    - frase: "non è vero"
+      peso: -0.70
+    - frase: "trattativa saltata"
+      peso: -0.78
+
+  de:
+    - frase: "dementiert"
+      peso: -0.65
+    - frase: "kein wechsel"
+      peso: -0.70
+    - frase: "deal geplatzt"
+      peso: -0.78
+
+  fr:
+    - frase: "démenti"
+      peso: -0.65
+    - frase: "accord rompu"
+      peso: -0.75
+    - frase: "affaire n'aboutira pas"
+      peso: -0.70

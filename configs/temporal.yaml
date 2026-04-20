@@ -1,0 +1,58 @@
+# Temporal weighting configuration
+# Los rumores tienen diferente peso según cuándo ocurren en el ciclo anual
+
+ventanas_mercado:
+  verano:
+    inicio_mes: 6
+    fin_mes: 8
+    factor_multiplicador: 1.8
+    descripcion: "Ventana principal. Rumors mucho más confiables y frecuentes."
+
+  enero:
+    inicio_mes: 1
+    fin_mes: 1
+    inicio_dia: 1
+    fin_dia: 31
+    factor_multiplicador: 1.4
+    descripcion: "Ventana de invierno. Menos movimiento que verano."
+
+  fuera_mercado:
+    factor_multiplicador: 0.6
+    descripcion: "Rumores fuera de ventana: filtrados tempranos o globos sonda."
+
+decaimiento_temporal:
+  vida_media_dias: 14
+  formula: "exp(-0.693 * dias_desde_publicacion / vida_media)"
+  descripcion: "Un rumor pierde la mitad de su peso en 14 días sin confirmación."
+  minimo: 0.1
+
+cierre_mercado_boost:
+  dias_antes_cierre: 7
+  factor: 2.5
+  descripcion: "Última semana de mercado: cualquier rumor fundado se acelera."
+
+fases_temporales:
+  1:
+    nombre: "interes_inicial"
+    descripcion: "Interés especulativo, sin contactos verificados"
+    peso: 0.2
+  2:
+    nombre: "contactos"
+    descripcion: "Contactos iniciales entre partes"
+    peso: 0.35
+  3:
+    nombre: "negociaciones"
+    descripcion: "Negociaciones en curso, oferta en mesa"
+    peso: 0.50
+  4:
+    nombre: "acuerdo_personal"
+    descripcion: "Acuerdo personal del jugador, pendiente clubs"
+    peso: 0.70
+  5:
+    nombre: "acuerdo_clubs"
+    descripcion: "Acuerdo entre clubs, detalles pendientes"
+    peso: 0.85
+  6:
+    nombre: "confirmado"
+    descripcion: "Médico pasado, contrato firmado, presentación"
+    peso: 0.99

@@ -1,0 +1,68 @@
+# Trial balloon / globo sonda detection patterns
+# These reduce the score rather than boost it
+
+marcadores_globo_sonda:
+  es:
+    - "según fuentes"
+    - "se baraja"
+    - "podría fichar"
+    - "suena para"
+    - "en la órbita de"
+    - "según entorno"
+    - "trascendió que"
+    - "se maneja la posibilidad"
+    - "no se descarta"
+    - "puede que"
+    - "se especula con"
+
+  en:
+    - "could be interested"
+    - "reportedly"
+    - "sources suggest"
+    - "is understood"
+    - "could be on the move"
+    - "believed to be interested"
+    - "said to be keen"
+    - "are monitoring"
+
+  it:
+    - "si insiste"
+    - "stando a indiscrezioni"
+    - "si parla di"
+    - "potrebbe"
+
+  de:
+    - "gerücht"
+    - "soll interesse haben"
+    - "angeblich"
+
+  fr:
+    - "selon les informations"
+    - "serait intéressé"
+    - "pourrait"
+
+# Heurísticas adicionales para detectar globos sonda
+heuristicas:
+  - nombre: solo_una_fuente
+    descripcion: "Solo una fuente lo reporta, tier B o C"
+    penalizacion: -0.15
+
+  - nombre: contradice_fuente_tier_s
+    descripcion: "Romano/Ornstein no lo mencionan 48h después"
+    penalizacion: -0.20
+
+  - nombre: periodista_mismo_club_beneficiado
+    descripcion: "El periodista trabaja para el club vendedor"
+    penalizacion: -0.12
+
+  - nombre: patron_historico_globo
+    descripcion: "El periodista tiene >40% tasa de globos sonda"
+    penalizacion: -0.18
+
+  - nombre: lenguaje_condicional
+    descripcion: "Uso de condicional: 'podría', 'could', 'pourrait'"
+    penalizacion: -0.10
+
+  - nombre: timing_sospechoso
+    descripcion: "Publicado un domingo a las 22:00 o en picos de atención"
+    penalizacion: -0.08

@@ -1,0 +1,56 @@
+# flags.yaml — estado inicial del sistema
+# Todos los flags operativos en OFF hasta inicialización completa
+# Los flags reales se guardan en D1 tabla flags_sistema
+
+flags:
+  alertas_realtime:
+    estado: ENFORCE_HARD
+    descripcion: "Alertas en tiempo real al chat de Telegram"
+
+  modo_silencio:
+    estado: OFF
+    descripcion: "Silenciar todas las alertas temporalmente"
+
+  debug_mode:
+    estado: OFF
+    descripcion: "Logging verboso en todos los jobs"
+
+  gemini_enabled:
+    estado: ON
+    descripcion: "Activar llamadas a Gemini Flash"
+
+  bluesky_scraping_enabled:
+    estado: ON
+    descripcion: "Activar scraping de Bluesky"
+
+  web_scraping_enabled:
+    estado: ON
+    descripcion: "Activar scraping web selectolax"
+
+  calibration_enabled:
+    estado: ON
+    descripcion: "Activar auto-calibración Bayesiana"
+
+  cantera_enabled:
+    estado: ON
+    descripcion: "Activar extensión cantera"
+
+  mercado_activo:
+    estado: OFF
+    descripcion: "Modo mercado activo: incrementa frecuencia de alertas"
+
+  trial_balloon_filter:
+    estado: ON
+    descripcion: "Activar filtro de globos sonda"
+
+  bias_correction_enabled:
+    estado: ON
+    descripcion: "Activar corrección de sesgo mediático"
+
+  economic_validator:
+    estado: ON
+    descripcion: "Activar validador económico en scoring"
+
+  substitution_propagation:
+    estado: ON
+    descripcion: "Activar propagación de sustitución en scoring"

@@ -1,0 +1,39 @@
+# English lexicon — DEPARTURE operation (salida)
+
+frases:
+  - frase: "sale agreed"
+    fase: 6
+    peso: 0.95
+  - frase: "exit agreed"
+    fase: 5
+    peso: 0.88
+  - frase: "loan agreed"
+    fase: 5
+    peso: 0.90
+  - frase: "on loan to"
+    fase: 5
+    peso: 0.88
+  - frase: "contract not renewed"
+    fase: 5
+    peso: 0.88
+  - frase: "will leave"
+    fase: 4
+    peso: 0.75
+  - frase: "leaving in the summer"
+    fase: 3
+    peso: 0.65
+  - frase: "will not renew"
+    fase: 3
+    peso: 0.75
+  - frase: "not in plans"
+    fase: 3
+    peso: 0.65
+  - frase: "not part of the manager plans"
+    fase: 3
+    peso: 0.68
+  - frase: "put up for sale"
+    fase: 3
+    peso: 0.65
+  - frase: "has asked to leave"
+    fase: 3
+    peso: 0.72

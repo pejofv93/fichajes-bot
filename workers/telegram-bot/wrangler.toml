@@ -1,0 +1,17 @@
+name = "fichajes-bot-telegram"
+main = "src/index.ts"
+compatibility_date = "2026-04-01"
+compatibility_flags = ["nodejs_compat"]
+
+[[d1_databases]]
+binding = "DB"
+database_name = "fichajes-bot"
+database_id = "PLACEHOLDER-REPLACE-WITH-REAL-ID"
+# Claude Code fills this after setup_d1.py runs
+
+[vars]
+ENVIRONMENT = "production"
+
+# Secrets added via `wrangler secret put`:
+# TELEGRAM_BOT_TOKEN
+# TELEGRAM_CHAT_ID_ALLOWED

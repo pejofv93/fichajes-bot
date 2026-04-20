@@ -1,0 +1,57 @@
+# Intensity modifiers — amplify the base weight
+
+modificadores:
+  positivos:
+    - frase: "exclusiva"
+      idioma: es
+      amplificador: 0.15
+    - frase: "confirmado"
+      idioma: es
+      amplificador: 0.20
+    - frase: "inminente"
+      idioma: es
+      amplificador: 0.18
+    - frase: "breaking"
+      idioma: en
+      amplificador: 0.15
+    - frase: "exclusive"
+      idioma: en
+      amplificador: 0.15
+    - frase: "imminent"
+      idioma: en
+      amplificador: 0.18
+    - frase: "scoop"
+      idioma: en
+      amplificador: 0.12
+    - frase: "ufficiale"
+      idioma: it
+      amplificador: 0.20
+    - frase: "offizielle"
+      idioma: de
+      amplificador: 0.20
+    - frase: "officiel"
+      idioma: fr
+      amplificador: 0.20
+    - frase: "filtración"
+      idioma: es
+      amplificador: 0.10
+    - frase: "bombazo"
+      idioma: es
+      amplificador: 0.05
+    - frase: "bomba"
+      idioma: es
+      amplificador: 0.05
+
+  negativos:
+    - frase: "rumor"
+      idioma: es
+      amplificador: -0.05
+    - frase: "especulación"
+      idioma: es
+      amplificador: -0.08
+    - frase: "rumour"
+      idioma: en
+      amplificador: -0.05
+    - frase: "speculation"
+      idioma: en
+      amplificador: -0.08

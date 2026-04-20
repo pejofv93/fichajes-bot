@@ -1,0 +1,90 @@
+# English lexicon — SIGNING operation (fichaje)
+
+frases:
+  - frase: "here we go"
+    fase: 6
+    peso: 0.98
+  - frase: "done deal"
+    fase: 6
+    peso: 0.97
+  - frase: "done deal confirmed"
+    fase: 6
+    peso: 0.99
+  - frase: "contract signed"
+    fase: 6
+    peso: 0.99
+  - frase: "signing confirmed"
+    fase: 6
+    peso: 0.99
+  - frase: "move confirmed"
+    fase: 6
+    peso: 0.96
+  - frase: "medical scheduled"
+    fase: 5
+    peso: 0.93
+  - frase: "medical tomorrow"
+    fase: 5
+    peso: 0.94
+  - frase: "will undergo medical"
+    fase: 5
+    peso: 0.93
+  - frase: "on his way to Madrid"
+    fase: 5
+    peso: 0.92
+  - frase: "agreement reached"
+    fase: 5
+    peso: 0.87
+  - frase: "clubs have reached agreement"
+    fase: 5
+    peso: 0.88
+  - frase: "release clause activated"
+    fase: 5
+    peso: 0.92
+  - frase: "fee agreed"
+    fase: 4
+    peso: 0.82
+  - frase: "transfer fee agreed"
+    fase: 4
+    peso: 0.83
+  - frase: "personal terms agreed"
+    fase: 4
+    peso: 0.85
+  - frase: "verbally agreed"
+    fase: 4
+    peso: 0.78
+  - frase: "bid accepted"
+    fase: 4
+    peso: 0.80
+  - frase: "exclusive negotiations"
+    fase: 4
+    peso: 0.75
+  - frase: "Real Madrid close to signing"
+    fase: 4
+    peso: 0.72
+  - frase: "in advanced talks"
+    fase: 3
+    peso: 0.65
+  - frase: "formal offer submitted"
+    fase: 3
+    peso: 0.65
+  - frase: "Real Madrid preparing offer"
+    fase: 3
+    peso: 0.60
+  - frase: "bid rejected"
+    fase: 3
+    peso: 0.55
+  - frase: "improved offer submitted"
+    fase: 3
+    peso: 0.62
+  - frase: "Real Madrid have made contact"
+    fase: 2
+    peso: 0.50
+  - frase: "Real Madrid want"
+    fase: 2
+    peso: 0.42
+  - frase: "Real Madrid are interested"
+    fase: 1
+    peso: 0.35
+  - frase: "Real Madrid are tracking"
+    fase: 1
+    peso: 0.32

@@ -1,0 +1,59 @@
+# Italian lexicon — ACQUISTO (signing) + CESSIONE (departure)
+
+fichaje:
+  - frase: "accordo trovato"
+    fase: 5
+    peso: 0.90
+  - frase: "accordo raggiunto"
+    fase: 5
+    peso: 0.90
+  - frase: "trattativa avanzata"
+    fase: 3
+    peso: 0.65
+  - frase: "visite mediche"
+    fase: 5
+    peso: 0.93
+  - frase: "contratto firmato"
+    fase: 6
+    peso: 0.98
+  - frase: "colpo fatto"
+    fase: 6
+    peso: 0.96
+  - frase: "affare chiuso"
+    fase: 6
+    peso: 0.95
+  - frase: "offerta presentata"
+    fase: 3
+    peso: 0.62
+  - frase: "offerta accettata"
+    fase: 4
+    peso: 0.82
+  - frase: "il Real Madrid vuole"
+    fase: 2
+    peso: 0.42
+  - frase: "trattativa in corso"
+    fase: 3
+    peso: 0.60
+  - frase: "intesa raggiunta"
+    fase: 5
+    peso: 0.87
+  - frase: "fumata bianca"
+    fase: 6
+    peso: 0.96
+
+salida:
+  - frase: "non rinnoverà"
+    fase: 3
+    peso: 0.75
+  - frase: "ha chiesto la cessione"
+    fase: 3
+    peso: 0.72
+  - frase: "addio confermato"
+    fase: 6
+    peso: 0.95
+  - frase: "lascia il real madrid"
+    fase: 5
+    peso: 0.85
+  - frase: "cessione accordata"
+    fase: 5
+    peso: 0.90

@@ -1,0 +1,47 @@
+# French lexicon — Transfert phrases
+
+fichaje:
+  - frase: "accord trouvé"
+    fase: 5
+    peso: 0.88
+  - frase: "visite médicale"
+    fase: 5
+    peso: 0.93
+  - frase: "transfert confirmé"
+    fase: 6
+    peso: 0.97
+  - frase: "contrat signé"
+    fase: 6
+    peso: 0.98
+  - frase: "le Real Madrid veut"
+    fase: 2
+    peso: 0.42
+  - frase: "offre formulée"
+    fase: 3
+    peso: 0.62
+  - frase: "accord entre clubs"
+    fase: 5
+    peso: 0.87
+  - frase: "accord personnel"
+    fase: 4
+    peso: 0.82
+  - frase: "dossier bouclé"
+    fase: 6
+    peso: 0.95
+  - frase: "en passe de signer"
+    fase: 5
+    peso: 0.88
+
+salida:
+  - frase: "ne renouvellera pas"
+    fase: 3
+    peso: 0.75
+  - frase: "départ confirmé"
+    fase: 6
+    peso: 0.95
+  - frase: "prêt confirmé"
+    fase: 6
+    peso: 0.94
+  - frase: "mis sur le marché"
+    fase: 3
+    peso: 0.62

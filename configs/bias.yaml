@@ -1,0 +1,131 @@
+# Apéndice D — Sesgo mediático documentado
+# Basado en análisis histórico de precisión por tipo de operación
+
+medios:
+  # MEDIOS PRO-REAL MADRID
+  # Históricamente inflan probabilidades de fichajes RM, desinflan salidas
+
+  marca:
+    sesgo: pro-rm
+    descripcion: "Medio madridista histórico. Inflación sistemática de rumores de fichajes RM."
+    factor_fichaje_positivo: 0.75
+    factor_salida_positiva: 1.00
+    factor_rival_negativo: 0.85
+    precision_historica_fichaje: 0.52
+    precision_historica_salida: 0.71
+    n_casos_analizados: 180
+    notas: "Especialmente inflado en ventanas de mercado de verano. Romano/Moretto tienen acuerdos de exclusiva."
+
+  as:
+    sesgo: pro-rm
+    descripcion: "Similar a MARCA. Factor ligeramente menor por mayor cobertura de salidas."
+    factor_fichaje_positivo: 0.70
+    factor_salida_positiva: 1.00
+    factor_rival_negativo: 0.85
+    precision_historica_fichaje: 0.49
+    precision_historica_salida: 0.73
+    n_casos_analizados: 155
+
+  cope:
+    sesgo: levemente-pro-rm
+    descripcion: "Radio deportiva. Mejor calibrada que MARCA/AS en salidas."
+    factor_fichaje_positivo: 0.82
+    factor_salida_positiva: 0.92
+    precision_historica_fichaje: 0.61
+    n_casos_analizados: 85
+
+  # MEDIOS PRO-BARCELONA
+  # Inflan rumores de fichajes Barça, exageran dificultades RM, desinflan salidas Barça
+
+  mundodeportivo:
+    sesgo: pro-barca
+    descripcion: "Historial de exagerar dificultades del RM y magnificar el Barça."
+    factor_fichaje_positivo: 0.90  # rumores RM-fichaje relativamente creíbles
+    factor_salida_positiva: 0.65   # salidas RM muy infladas (favorece al Barça narrativamente)
+    factor_rival_negativo: 0.70
+    precision_historica_fichaje: 0.58
+    precision_historica_salida: 0.44
+    n_casos_analizados: 120
+
+  sport_es:
+    sesgo: pro-barca
+    descripcion: "Más extremo que MD en el sesgo. Rumores de salidas RM frecuentemente fabricados."
+    factor_fichaje_positivo: 0.90
+    factor_salida_positiva: 0.60
+    precision_historica_fichaje: 0.56
+    precision_historica_salida: 0.41
+    n_casos_analizados: 98
+
+  # MEDIOS SENSACIONALISTAS / BAJA FIABILIDAD
+
+  okdiario:
+    sesgo: sensacionalista-pro-rm
+    descripcion: "Muy bajo accuracy histórico. Alto volumen de exclusivas falsas."
+    factor_fichaje_positivo: 0.45
+    factor_salida_positiva: 0.50
+    precision_historica_fichaje: 0.31
+    n_casos_analizados: 60
+
+  el_chiringuito:
+    sesgo: sensacionalista
+    descripcion: "Programa de debate. Sus 'exclusivas' de fichajes tienen muy baja tasa de confirmación."
+    factor_fichaje_positivo: 0.40
+    factor_salida_positiva: 0.55
+    precision_historica_fichaje: 0.28
+    n_casos_analizados: 75
+    notas: "Algunas fuentes internas RM pero muy distorsionadas por el formato espectáculo."
+
+  fichajes_net:
+    sesgo: clickbait
+    factor_fichaje_positivo: 0.35
+    factor_salida_positiva: 0.40
+    precision_historica_fichaje: 0.22
+    n_casos_analizados: 200
+    notas: "Agrega rumores de otros medios sin verificación. No tienen fuentes propias."
+
+  # MEDIOS NEUTRALES DE ALTA CALIDAD
+
+  relevo:
+    sesgo: neutral
+    descripcion: "Romano + Moretto tienen exclusivas reales. El medio en sí es equilibrado."
+    factor_fichaje_positivo: 1.00
+    factor_salida_positiva: 1.00
+    precision_historica_fichaje: 0.79
+    n_casos_analizados: 110
+
+  the_athletic:
+    sesgo: neutral
+    descripcion: "Ornstein + equipo de corresponsales. Verificación rigurosa."
+    factor_fichaje_positivo: 1.00
+    factor_salida_positiva: 1.00
+    precision_historica_fichaje: 0.82
+    n_casos_analizados: 95
+
+  sky_sports_de:
+    sesgo: neutral
+    descripcion: "Plettenberg es riguroso en noticias RM."
+    factor_fichaje_positivo: 1.00
+    factor_salida_positiva: 0.95
+    precision_historica_fichaje: 0.77
+    n_casos_analizados: 55
+
+  bbc_sport:
+    sesgo: neutral
+    factor_fichaje_positivo: 1.00
+    factor_salida_positiva: 1.00
+    precision_historica_fichaje: 0.74
+    n_casos_analizados: 40
+
+# Fuentes oficiales — siempre factor 1.0 (o más para confirmaciones)
+fuentes_oficiales:
+  - realmadrid.com
+  - laliga.com
+  - rfef.es
+  factor_override: 1.0
+  confianza_base: 1.0
+
+# Notas de aplicación:
+# - El factor se aplica DESPUÉS del scoring base, como multiplicador
+# - factor < 1.0 reduce el peso del rumor
+# - factor > 1.0 amplifica (solo para fuentes oficiales)
+# - Los factores son asimétricos: pro-rm infla fichajes pero no salidas

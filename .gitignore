@@ -1,0 +1,31 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.venv/
+venv/
+.env
+*.egg-info/
+dist/
+build/
+.mypy_cache/
+.ruff_cache/
+.pytest_cache/
+.coverage
+
+# Test databases
+test_d1.db
+*.db
+
+# Node / Worker
+workers/telegram-bot/node_modules/
+workers/telegram-bot/.wrangler/
+
+# Data (archives committed, raw not)
+data/backfill/*.json
+data/backfill/*.csv
+
+# IDE
+.idea/
+.vscode/
+*.swp

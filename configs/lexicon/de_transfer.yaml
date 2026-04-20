@@ -1,0 +1,47 @@
+# German lexicon — Transfer phrases
+
+fichaje:
+  - frase: "einigung erzielt"
+    fase: 5
+    peso: 0.88
+  - frase: "deal perfekt"
+    fase: 6
+    peso: 0.96
+  - frase: "medizincheck"
+    fase: 5
+    peso: 0.93
+  - frase: "unterschrift"
+    fase: 6
+    peso: 0.95
+  - frase: "transfer fix"
+    fase: 6
+    peso: 0.96
+  - frase: "wechsel perfekt"
+    fase: 6
+    peso: 0.96
+  - frase: "interesse von real madrid"
+    fase: 1
+    peso: 0.35
+  - frase: "einig geworden"
+    fase: 5
+    peso: 0.87
+  - frase: "angebot eingereicht"
+    fase: 3
+    peso: 0.62
+  - frase: "ablösesumme vereinbart"
+    fase: 4
+    peso: 0.82
+
+salida:
+  - frase: "verlässt real madrid"
+    fase: 5
+    peso: 0.85
+  - frase: "vertrag läuft aus"
+    fase: 4
+    peso: 0.72
+  - frase: "abgang fix"
+    fase: 6
+    peso: 0.94
+  - frase: "kein neuer vertrag"
+    fase: 4
+    peso: 0.75

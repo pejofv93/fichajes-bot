@@ -1,0 +1,42 @@
+# economic.yaml — configuración del modelo económico
+
+# Scrapers para datos económicos (todos selectolax, sin Playwright)
+scrapers:
+  transfermarkt:
+    url: https://www.transfermarkt.com/real-madrid/kader/verein/418
+    selector_valor: "td.rechts.hauptlink"
+    selector_jugador: "td.hauptlink a"
+    frecuencia: diaria
+
+  capology:
+    url: https://www.capology.com/club/real-madrid/salaries
+    selector_salario: "td.number"
+    selector_jugador: "td.name"
+    frecuencia: semanal
+
+  laliga_tope:
+    url: https://www.laliga.com/transparencia/limites-coste-plantilla
+    selector_tope_rm: "[data-club='real-madrid'] .limit"
+    frecuencia: semanal
+
+# Reglas FFP LaLiga 2025-26
+ffp:
+  regla_viabilidad: 1_to_1  # por cada 1€ gasto nuevo necesitas 1€ de ingreso
+  max_ratio_salarial: 0.70   # salarios no pueden superar 70% de ingresos
+  penalizacion_exceso: reduccion_tope_siguiente_temporada
+
+# Política de fichajes RM (estimación)
+politica:
+  edad_maxima_fichaje: 30
+  valor_minimo_m: 0
+  posiciones_prioritarias:
+    - mediocentro
+    - delantero_centro
+    - extremo_derecho
+    - lateral_derecho
+
+# Umbrales validador económico
+umbrales:
+  margen_minimo_para_fichaje_m: 50
+  factor_reduccion_si_no_margen: 0.5
+  factor_boost_si_hay_margen: 1.2

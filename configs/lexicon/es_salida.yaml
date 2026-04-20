@@ -1,0 +1,63 @@
+# Léxico español — operación SALIDA (departure)
+
+frases:
+  - frase: "venta cerrada"
+    fase: 6
+    peso: 0.96
+  - frase: "cesión confirmada"
+    fase: 6
+    peso: 0.95
+  - frase: "acuerdo para su venta"
+    fase: 5
+    peso: 0.88
+  - frase: "rescisión acordada"
+    fase: 5
+    peso: 0.92
+  - frase: "rescisión de contrato"
+    fase: 5
+    peso: 0.90
+  - frase: "traspaso inminente"
+    fase: 5
+    peso: 0.87
+  - frase: "salida libre"
+    fase: 5
+    peso: 0.85
+  - frase: "sale libre en junio"
+    fase: 4
+    peso: 0.80
+  - frase: "contrato no renovado"
+    fase: 5
+    peso: 0.88
+  - frase: "cedido al"
+    fase: 5
+    peso: 0.85
+  - frase: "no renovará"
+    fase: 3
+    peso: 0.75
+  - frase: "ha pedido la salida"
+    fase: 3
+    peso: 0.72
+  - frase: "descartado por el Madrid"
+    fase: 3
+    peso: 0.65
+  - frase: "no cuenta para Ancelotti"
+    fase: 3
+    peso: 0.70
+  - frase: "fuera de los planes"
+    fase: 3
+    peso: 0.68
+  - frase: "en la lista de ventas"
+    fase: 3
+    peso: 0.65
+  - frase: "buscando equipo"
+    fase: 3
+    peso: 0.62
+  - frase: "fin de contrato"
+    fase: 4
+    peso: 0.75
+  - frase: "ofrecido a otros clubes"
+    fase: 2
+    peso: 0.50
+  - frase: "quiere salir"
+    fase: 2
+    peso: 0.55
