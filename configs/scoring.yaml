@@ -1,0 +1,50 @@
+# Scoring configuration — fichajes-bot v3.1
+# Weights for score_raw combination and Kalman filter parameters
+
+# ── Component weights (must sum to ~1.0) ──────────────────────────────────
+weights:
+  consenso:     0.30   # proportion of journalists pointing to same tipo/club
+  credibilidad: 0.35   # reliability-weighted signal strength
+  fase:         0.25   # rumor phase progression (1-6)
+  temporal:     0.10   # recency decay factor
+
+# ── Sigmoid scaling ───────────────────────────────────────────────────────
+sigmoid:
+  scale: 6.0   # multiplier before sigmoid; controls steepness around 0.5
+  # score_raw = sigmoid(scale * (w1*c + w2*cr + w3*(fase/6) + w4*t - 0.5))
+
+# ── Thresholds for alerts ──────────────────────────────────────────────────
+alert_thresholds:
+  jump_for_alert: 0.15   # min delta in score_smoothed to trigger an alert
+  min_score_for_alert: 0.30
+
+# ── Kalman filter parameters ──────────────────────────────────────────────
+kalman:
+  Q_base: 0.01       # process noise (how fast score can change naturally)
+  R_base: 0.04       # measurement noise (base uncertainty per rumor)
+  Q_hard_signal_mult: 3.0   # multiply Q by this when hard signal detected
+  # R is divided by credibilidad_media: more credible → less measurement noise
+  initial_P: 1.0     # initial variance (high uncertainty at start)
+  initial_x: 0.05    # initial state (low score before any news)
+
+# ── Phase weights for fase_dominante calculation ──────────────────────────
+fase_weights:
+  # Each phase weighted by its signal value (not just the number)
+  1: 0.10
+  2: 0.20
+  3: 0.35
+  4: 0.55
+  5: 0.80
+  6: 0.98
+
+# ── Temporal decay ────────────────────────────────────────────────────────
+temporal:
+  half_life_days: 14     # rumor loses half weight after 14 days
+  minimum_weight: 0.10   # floor so old rumors don't drop to zero
+  window_days: 60        # ignore rumors older than this
+
+# ── Score caps / floors ────────────────────────────────────────────────────
+score:
+  max_raw: 0.99
+  min_raw: 0.01
+  official_floor: 0.85   # if fichaje oficial → score_smoothed forced to ≥ this
