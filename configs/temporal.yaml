@@ -31,6 +31,19 @@ cierre_mercado_boost:
   factor: 2.5
   descripcion: "Última semana de mercado: cualquier rumor fundado se acelera."
 
+eventos_especiales:
+  - nombre: "Post Mundial 2026"
+    fecha_inicio: "2026-07-20"
+    fecha_fin: "2026-08-31"
+    factor_multiplicador: 1.10
+    descripcion: "Tras el Mundial de EEUU-Canada-Mexico: mercado activo con jugadores destacados"
+
+  - nombre: "Post Euro 2024"
+    fecha_inicio: "2024-07-15"
+    fecha_fin: "2024-08-31"
+    factor_multiplicador: 1.10
+    descripcion: "Tras la Eurocopa: mercado activo con seleccionables"
+
 fases_temporales:
   1:
     nombre: "interes_inicial"

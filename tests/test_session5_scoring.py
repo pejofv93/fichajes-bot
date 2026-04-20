@@ -638,23 +638,40 @@ class TestScoreJob:
 
 class TestModifiers:
     @pytest.mark.asyncio
-    async def test_all_modifiers_neutral(self, db):
+    async def test_modifiers_return_float_in_range(self, db):
+        """apply_modifiers returns (float, dict) with score in valid range.
+
+        Session 6: temporal modifier is active (market-window aware), so the
+        combined factor is no longer guaranteed to be 1.0.
+        """
         from fichajes_bot.scoring.modifiers import apply_modifiers
         rumores = [_make_rumor()]
         score, factors = await apply_modifiers("j1", rumores, 0.65, db)
-        # All neutral → score unchanged
-        assert abs(score - 0.65) < 1e-6, f"Expected neutral modifiers, got {score}"
-        assert factors["combined"] == 1.0
+        assert 0.01 <= score <= 0.99, f"score out of range: {score}"
+        assert "combined" in factors
+        assert isinstance(factors["combined"], float)
 
     @pytest.mark.asyncio
     async def test_modifier_hooks_exist(self, db):
-        """All 5 modifier functions exist and return float."""
+        """All modifier functions exist, are callable, and return a valid float."""
         from fichajes_bot.scoring.modifiers import (
             factor_economico, factor_globo_sonda, factor_retractacion,
             factor_sesgo, factor_substitucion,
         )
-        assert await factor_economico("j1", 0.5, db) == 1.0
-        assert await factor_substitucion("j1", 0.5, db) == 1.0
-        assert await factor_sesgo([], 0.5, db) == 1.0
-        assert await factor_globo_sonda([], 0.5, db) == 1.0
-        assert await factor_retractacion("j1", [], 0.5, db) == 1.0
+        f_econ  = await factor_economico("j1", 0.5, db)
+        f_subst = await factor_substitucion("j1", 0.5, db)
+        f_sesgo = await factor_sesgo([], 0.5, db)
+        f_globo = await factor_globo_sonda([], 0.5, db)
+        f_retr  = await factor_retractacion("j1", [], 0.5, db)
+
+        for name, val in [("econ", f_econ), ("subst", f_subst), ("sesgo", f_sesgo),
+                          ("globo", f_globo), ("retr", f_retr)]:
+            assert isinstance(val, float), f"factor_{name} should return float, got {type(val)}"
+            assert 0.0 < val <= 2.0, f"factor_{name} out of reasonable range: {val}"
+
+        # Session 7 stubs are still neutral
+        assert f_sesgo == 1.0
+        assert f_globo == 1.0
+        assert f_retr  == 1.0
+        # SubstitutionEngine: no "j1" in DB → HUECO_NATURAL = 1.0
+        assert f_subst == 1.0

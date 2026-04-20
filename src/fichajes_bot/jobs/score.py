@@ -66,6 +66,9 @@ async def run(full: bool = False, limit: int = 200) -> dict[str, int]:
         # Mark pending events as processed
         if not full:
             await _mark_events_processed(db)
+        else:
+            # After full scoring, propagate substitution effects for newly classified outcomes
+            await _run_substitution_propagation(db)
 
         # Record metrics
         now = datetime.now(timezone.utc).isoformat()
@@ -107,6 +110,41 @@ async def _get_all_active_jugadores(db: D1Client) -> list[str]:
                   OR fecha_publicacion >= datetime('now', '-48 hours'))"""
     )
     return [r["jugador_id"] for r in rows]
+
+
+async def _run_substitution_propagation(db: D1Client) -> None:
+    """Propagate score changes for players with outcomes classified in the last 4h."""
+    from fichajes_bot.validators.substitution import SubstitutionEngine
+
+    engine = SubstitutionEngine(db)
+    await engine.build_graph()
+
+    # Signed players (FICHAJE confirmed) → reduce alternatives' scores
+    signed = await db.execute(
+        """SELECT DISTINCT r.jugador_id FROM rumores r
+           JOIN jugadores j ON r.jugador_id = j.jugador_id
+           WHERE r.outcome = 'CONFIRMADO'
+             AND r.outcome_at >= datetime('now', '-4 hours')
+             AND j.tipo_operacion_principal = 'FICHAJE'"""
+    )
+    for row in signed:
+        await engine.propagate_on_signing(row["jugador_id"])
+        logger.info(f"substitution propagation: signing {row['jugador_id'][:8]}")
+
+    # Players who left (SALIDA confirmed) → boost candidates for that position
+    sold = await db.execute(
+        """SELECT DISTINCT r.jugador_id FROM rumores r
+           JOIN jugadores j ON r.jugador_id = j.jugador_id
+           WHERE r.outcome = 'CONFIRMADO'
+             AND r.outcome_at >= datetime('now', '-4 hours')
+             AND j.tipo_operacion_principal = 'SALIDA'"""
+    )
+    for row in sold:
+        await engine.propagate_on_sale(row["jugador_id"])
+        logger.info(f"substitution propagation: sale {row['jugador_id'][:8]}")
+
+    if not signed and not sold:
+        logger.debug("substitution propagation: no recent outcomes to propagate")
 
 
 async def _mark_events_processed(db: D1Client) -> None:
