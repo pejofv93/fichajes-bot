@@ -120,6 +120,43 @@ class JugadorRepository:
         )
 
 
+class FuenteRepository:
+    def __init__(self, db: D1Client) -> None:
+        self.db = db
+
+    async def get_active_by_tiers(self, tiers: list[str], tipo: str | None = None) -> list[dict]:
+        placeholders = ",".join("?" * len(tiers))
+        params: list = list(tiers)
+        tipo_clause = ""
+        if tipo:
+            tipo_clause = " AND tipo=?"
+            params.append(tipo)
+        return await self.db.execute(
+            f"SELECT * FROM fuentes WHERE tier IN ({placeholders}) "
+            f"AND is_disabled=0{tipo_clause}",
+            params,
+        )
+
+    async def disable(self, fuente_id: str) -> None:
+        await self.db.execute(
+            "UPDATE fuentes SET is_disabled=1, updated_at=datetime('now') WHERE fuente_id=?",
+            [fuente_id],
+        )
+
+    async def bump_errors(self, fuente_id: str) -> None:
+        await self.db.execute(
+            "UPDATE fuentes SET consecutive_errors=consecutive_errors+1, "
+            "updated_at=datetime('now') WHERE fuente_id=?",
+            [fuente_id],
+        )
+
+    async def reset_errors(self, fuente_id: str) -> None:
+        await self.db.execute(
+            "UPDATE fuentes SET consecutive_errors=0, updated_at=datetime('now') WHERE fuente_id=?",
+            [fuente_id],
+        )
+
+
 class MetricasRepository:
     def __init__(self, db: D1Client) -> None:
         self.db = db

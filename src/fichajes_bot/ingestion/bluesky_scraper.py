@@ -1,4 +1,4 @@
-"""Bluesky scraper using atproto."""
+"""Bluesky scraper — atproto AsyncClient, cursor-based pagination, 15s timeout."""
 
 from __future__ import annotations
 
@@ -7,83 +7,116 @@ from typing import Any
 
 from loguru import logger
 
+from fichajes_bot.ingestion.deduplication import filter_new, make_hash
 from fichajes_bot.persistence.d1_client import D1Client
 from fichajes_bot.persistence.repositories import MetricasRepository, RumorRawRepository
-from fichajes_bot.utils.helpers import sha256_hash
+
+_CURSOR_PREFIX = "bluesky_cursor_"
+_FEED_LIMIT = 30  # posts per page
 
 
 class BlueskyScraper:
     def __init__(self, db: D1Client) -> None:
         self.db = db
         self.repo = RumorRawRepository(db)
+        self._metrics = MetricasRepository(db)
+        self._client: Any = None  # atproto AsyncClient, lazy-initialised
 
-    async def scrape(self, source: dict[str, Any]) -> int:
-        handle = source.get("bluesky_handle")
-        if not handle:
-            return 0
+    async def _get_client(self) -> Any:
+        """Login once per scraper instance; reuse afterwards."""
+        if self._client is not None:
+            return self._client
 
         bsky_handle = os.environ.get("BLUESKY_HANDLE", "")
         bsky_password = os.environ.get("BLUESKY_APP_PASSWORD", "")
 
         if not bsky_handle or not bsky_password:
-            logger.warning("BLUESKY credentials not set, skipping Bluesky source")
-            return 0
+            raise RuntimeError("BLUESKY_HANDLE / BLUESKY_APP_PASSWORD not set")
 
         try:
             from atproto import AsyncClient
-        except ImportError:
-            logger.warning("atproto not installed")
+        except ImportError as exc:
+            raise RuntimeError("atproto not installed — run: pip install atproto") from exc
+
+        client = AsyncClient(timeout=15.0)
+        await client.login(bsky_handle, bsky_password)
+        self._client = client
+        return client
+
+    async def _load_cursor(self, fuente_id: str) -> str | None:
+        row = await self._metrics.get_latest(f"{_CURSOR_PREFIX}{fuente_id}")
+        return row["value"] if row else None
+
+    async def _save_cursor(self, fuente_id: str, cursor: str) -> None:
+        await self._metrics.upsert(f"{_CURSOR_PREFIX}{fuente_id}", cursor)
+
+    async def scrape(self, source: dict[str, Any]) -> int:
+        """Fetch new posts from a Bluesky handle. Returns count of new items ingested."""
+        handle = source.get("bluesky_handle")
+        if not handle:
             return 0
 
         try:
-            client = AsyncClient()
-            await client.login(bsky_handle, bsky_password)
+            client = await self._get_client()
+        except RuntimeError as exc:
+            logger.warning(f"Bluesky {source['fuente_id']}: cannot initialise client — {exc}")
+            return 0
 
-            cursor_rows = await self.db.execute(
-                "SELECT value FROM metricas_sistema WHERE metric_name=? ORDER BY timestamp DESC LIMIT 1",
-                [f"bluesky_cursor_{source['fuente_id']}"],
+        cursor = await self._load_cursor(source["fuente_id"])
+
+        try:
+            response = await client.get_author_feed(
+                handle,
+                limit=_FEED_LIMIT,
+                cursor=cursor,
             )
-            cursor = cursor_rows[0]["value"] if cursor_rows else None
-
-            response = await client.get_author_feed(handle, limit=30, cursor=cursor)
-            posts = response.feed
-
-            items = []
-            for post_view in posts:
-                post = post_view.post
-                text = getattr(post.record, "text", "")
-                uri = post.uri
-                created_at = getattr(post.record, "created_at", "")
-                h = sha256_hash(uri, text[:200])
-                items.append({
-                    "fuente_id": source["fuente_id"],
-                    "url_canonico": f"https://bsky.app/profile/{handle}/post/{uri.split('/')[-1]}",
-                    "titulo": text[:200],
-                    "texto_completo": text[:5000],
-                    "html_crudo": None,
-                    "fecha_publicacion": created_at,
-                    "idioma_detectado": source.get("idioma", "en"),
-                    "hash_dedup": h,
-                })
-
-            if items:
-                existing = await self.repo.hashes_exist_batch([i["hash_dedup"] for i in items])
-                new_items = [i for i in items if i["hash_dedup"] not in existing]
-                if new_items:
-                    await self.repo.insert_batch(new_items)
-
-            new_cursor = getattr(response, "cursor", None)
-            if new_cursor:
-                metrics = MetricasRepository(self.db)
-                await metrics.upsert(f"bluesky_cursor_{source['fuente_id']}", str(new_cursor))
-
-            await self.db.execute(
-                "UPDATE fuentes SET last_fetched_at=datetime('now'), consecutive_errors=0 WHERE fuente_id=?",
-                [source["fuente_id"]],
-            )
-            logger.debug(f"Bluesky {source['fuente_id']}: {len(items)} posts fetched")
-            return len(items)
-
         except Exception as exc:
-            logger.warning(f"Bluesky scrape failed for {source['fuente_id']}: {exc}")
-            raise
+            logger.warning(f"Bluesky {source['fuente_id']}: get_author_feed failed — {exc}")
+            raise  # bubble up so resolver can apply fallback
+
+        posts = response.feed or []
+        items: list[dict[str, Any]] = []
+
+        for post_view in posts:
+            post = post_view.post
+            text: str = getattr(post.record, "text", "") or ""
+            uri: str = post.uri or ""
+            created_at: str = getattr(post.record, "created_at", "") or ""
+
+            # Build canonical URL from AT-URI  (at://did/app.bsky.feed.post/rkey)
+            rkey = uri.split("/")[-1] if uri else ""
+            canonical_url = f"https://bsky.app/profile/{handle}/post/{rkey}" if rkey else ""
+
+            h = make_hash(uri, text[:200])
+            items.append({
+                "fuente_id": source["fuente_id"],
+                "url_canonico": canonical_url[:2048],
+                "titulo": text[:200] if text else None,
+                "texto_completo": text[:5000] if text else None,
+                "html_crudo": None,
+                "fecha_publicacion": created_at[:64] if created_at else None,
+                "idioma_detectado": source.get("idioma", "en"),
+                "hash_dedup": h,
+            })
+
+        new_items = await filter_new(self.db, items) if items else []
+
+        if new_items:
+            await self.repo.insert_batch(new_items)
+
+        # Persist cursor so next run resumes from here
+        new_cursor: str | None = getattr(response, "cursor", None)
+        if new_cursor:
+            await self._save_cursor(source["fuente_id"], new_cursor)
+
+        await self.db.execute(
+            "UPDATE fuentes SET last_fetched_at=datetime('now'), consecutive_errors=0, "
+            "updated_at=datetime('now') WHERE fuente_id=?",
+            [source["fuente_id"]],
+        )
+
+        logger.info(
+            f"Bluesky {source['fuente_id']} (@{handle}): "
+            f"{len(new_items)} new / {len(items)} fetched"
+        )
+        return len(new_items)
