@@ -34,6 +34,7 @@ export default {
         "/castilla — Castilla movimientos\n" +
         "/juvenil — Juvenil A movimientos\n" +
         "/cedidos — Canteranos cedidos\n" +
+        "/debut\\_watch — Próximos debuts cantera\n" +
         "/economia — Estado modelo económico\n" +
         "/silencio — Pausar/reanudar alertas\n" +
         "/status — Estado del sistema\n" +
@@ -216,6 +217,32 @@ export default {
         "SELECT COUNT(*) as n FROM jugadores WHERE is_active=1"
       ).first<any>();
 
+      // Última retractación detectada
+      const lastRetraction = await env.DB.prepare(`
+        SELECT j.nombre_canonico, r.retractado_at, p.nombre_completo as periodista
+        FROM rumores r
+        LEFT JOIN jugadores j ON r.jugador_id = j.jugador_id
+        LEFT JOIN periodistas p ON r.periodista_id = p.periodista_id
+        WHERE r.retractado = 1
+        ORDER BY r.retractado_at DESC LIMIT 1
+      `).first<any>();
+
+      // Flags activos en el sistema
+      const activeFlags = await env.DB.prepare(`
+        SELECT flag_name, estado
+        FROM flags_sistema
+        WHERE estado != 'OFF'
+        ORDER BY flag_name
+      `).all();
+
+      const retractionLine = lastRetraction
+        ? `🚫 Última retractación: ${lastRetraction.nombre_canonico || "?"} (${lastRetraction.retractado_at?.split("T")[0] || "?"})`
+        : `✅ Sin retractaciones recientes`;
+
+      const flagLines = (activeFlags.results as any[]).length > 0
+        ? `🚩 Flags activos: ${(activeFlags.results as any[]).map((f: any) => `${f.flag_name}=${f.estado}`).join(", ")}`
+        : `✅ Sin flags activos`;
+
       const msg = [
         `⚙️ *Estado del sistema — Fichajes Bot v3.1*`,
         ``,
@@ -227,6 +254,9 @@ export default {
         m.sources_degradadas?.value > 0
           ? `⚠️ Fuentes degradadas: ${m.sources_degradadas.value}`
           : `✅ Todas las fuentes operativas`,
+        ``,
+        retractionLine,
+        flagLines,
       ].join("\n");
 
       await ctx.reply(msg, { parse_mode: "Markdown" });
@@ -279,6 +309,37 @@ export default {
 
       await ctx.reply(
         `⭐ *Juvenil A — Talentos*\n━━━━━━━━━━━━━━━\n\n${lines.join("\n")}`,
+        { parse_mode: "Markdown" }
+      );
+    });
+
+    // ── /debut_watch ─────────────────────────────────────────────────
+    bot.command("debut_watch", async (ctx) => {
+      const rows = await env.DB.prepare(`
+        SELECT nombre_canonico, score_smoothed, entidad, posicion, edad
+        FROM jugadores
+        WHERE entidad IN ('castilla', 'juvenil_a')
+          AND score_smoothed >= 0.3
+          AND is_active = 1
+        ORDER BY score_smoothed DESC LIMIT 5
+      `).all();
+
+      if (!rows.results.length) {
+        await ctx.reply("Sin candidatos a debut identificados actualmente.");
+        return;
+      }
+
+      const lines = (rows.results as any[]).map((r, i) => {
+        const pct = Math.round((r.score_smoothed || 0) * 100);
+        const em = pct >= 70 ? "🟢" : pct >= 40 ? "🟡" : "🔴";
+        const nivel = r.entidad === "castilla" ? "Castilla" : "Juvenil A";
+        const pos = r.posicion ? ` · ${r.posicion}` : "";
+        const edad = r.edad ? ` (${r.edad}a)` : "";
+        return `${i + 1}. ${em} *${r.nombre_canonico}*${edad}${pos} [${nivel}] — ${pct}%`;
+      });
+
+      await ctx.reply(
+        `🌟 *DEBUT WATCH — Próximos 5 candidatos*\n━━━━━━━━━━━━━━━\n\n${lines.join("\n")}\n\n_Probabilidad estimada de debut en primer equipo_`,
         { parse_mode: "Markdown" }
       );
     });
