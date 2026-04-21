@@ -595,13 +595,54 @@ class TestScrapeJob:
 
 
 # ────────────────────────────────────────────────────────────────────────────
-# D1Client — batch endpoint contract
+# D1Client — execute_batch uses sequential /query calls (CF REST API has no /batch)
 # ────────────────────────────────────────────────────────────────────────────
 
 class TestD1ClientBatchEndpoint:
     @pytest.mark.asyncio
-    async def test_execute_batch_uses_batch_endpoint_and_wraps_statements(self):
-        """execute_batch must POST to /batch with {"statements":[...]} — not bare array to /query."""
+    async def test_execute_batch_via_query_endpoint(self):
+        """N statements → N POST calls to /query, each with {sql, params}."""
+        import os
+        from unittest.mock import AsyncMock, MagicMock, patch, call
+
+        env_overrides = {
+            "D1_MODE": "cloudflare",
+            "CLOUDFLARE_ACCOUNT_ID": "acc123",
+            "CLOUDFLARE_D1_DATABASE_ID": "db456",
+            "CLOUDFLARE_API_TOKEN": "tok789",
+        }
+        stmts = [
+            {"sql": "INSERT INTO metricas_sistema (metric_name) VALUES (?)", "params": ["a"]},
+            {"sql": "INSERT INTO metricas_sistema (metric_name) VALUES (?)", "params": ["b"]},
+        ]
+
+        with patch.dict(os.environ, env_overrides):
+            from fichajes_bot.persistence.d1_client import D1Client
+
+            client = D1Client()
+
+            mock_response = MagicMock()
+            mock_response.raise_for_status = MagicMock()
+            mock_response.json.return_value = {"success": True, "result": [{"results": []}]}
+            client._client.post = AsyncMock(return_value=mock_response)
+
+            await client.execute_batch(stmts)
+
+            calls = client._client.post.call_args_list
+
+        assert len(calls) == 2, f"Expected 2 /query calls, got {len(calls)}"
+        for i, c in enumerate(calls):
+            url_arg = c[0][0]
+            json_arg = c[1]["json"]
+            assert url_arg.endswith("/query"), f"Call {i}: expected /query, got {url_arg}"
+            assert json_arg["sql"] == stmts[i]["sql"]
+            assert json_arg["params"] == stmts[i]["params"]
+
+        await client.close()
+
+    @pytest.mark.asyncio
+    async def test_execute_batch_continues_on_failure(self):
+        """If stmt[1] raises, stmt[2] still executes."""
         import os
         from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -611,26 +652,28 @@ class TestD1ClientBatchEndpoint:
             "CLOUDFLARE_D1_DATABASE_ID": "db456",
             "CLOUDFLARE_API_TOKEN": "tok789",
         }
-        stmts = [{"sql": "INSERT INTO metricas_sistema (metric_name) VALUES (?)", "params": ["x"]}]
+        stmts = [
+            {"sql": "INSERT INTO a VALUES (?)", "params": ["ok"]},
+            {"sql": "INSERT INTO bad VALUES (?)", "params": ["fail"]},
+            {"sql": "INSERT INTO c VALUES (?)", "params": ["also_ok"]},
+        ]
+
+        ok_response = MagicMock()
+        ok_response.raise_for_status = MagicMock()
+        ok_response.json.return_value = {"success": True, "result": [{"results": []}]}
+
+        fail_response = MagicMock()
+        fail_response.raise_for_status = MagicMock(side_effect=Exception("400 Bad Request"))
 
         with patch.dict(os.environ, env_overrides):
             from fichajes_bot.persistence.d1_client import D1Client
 
             client = D1Client()
+            client._client.post = AsyncMock(side_effect=[ok_response, fail_response, ok_response])
 
-            mock_response = MagicMock()
-            mock_response.raise_for_status = MagicMock()
-            mock_response.json.return_value = {"success": True, "result": []}
-            client._client.post = AsyncMock(return_value=mock_response)
+            await client.execute_batch(stmts)  # must not raise
 
-            await client.execute_batch(stmts)
-
-            call_args = client._client.post.call_args
-            url_arg = call_args[0][0]
-            json_arg = call_args[1]["json"]
-
-        assert url_arg.endswith("/batch"), f"Expected /batch endpoint, got: {url_arg}"
-        assert json_arg == {"statements": stmts}, f"Expected {{statements:[...]}} wrapper, got: {json_arg}"
+            assert client._client.post.call_count == 3, "All 3 statements must be attempted"
 
         await client.close()
 

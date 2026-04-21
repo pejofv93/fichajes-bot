@@ -82,19 +82,20 @@ class D1Client:
         return data["result"][0]["results"]
 
     async def execute_batch(self, statements: list[dict[str, Any]]) -> None:
-        """Ejecutar múltiples statements en batch (más eficiente)."""
+        """Ejecutar múltiples statements vía N llamadas secuenciales a /query.
+
+        CF D1 REST API no expone /batch — solo /query. Cada statement se ejecuta
+        de forma independiente; un fallo individual se loguea pero no aborta el resto.
+        """
         if self._mode == "emulated":
             for stmt in statements:
                 self._sqlite_execute(stmt["sql"], stmt.get("params", []))
             return
-        r = await self._client.post(
-            f"/accounts/{self.account_id}/d1/database/{self.database_id}/batch",
-            json={"statements": statements},
-        )
-        r.raise_for_status()
-        data = r.json()
-        if not data["success"]:
-            raise RuntimeError(f"D1 batch error: {data['errors']}")
+        for i, stmt in enumerate(statements):
+            try:
+                await self.execute(stmt["sql"], stmt.get("params"))
+            except Exception as exc:
+                logger.warning(f"execute_batch stmt[{i}] failed (continuing): {exc}")
 
     async def execute_file(self, sql_content: str) -> None:
         """Ejecutar un archivo SQL completo (para migrations)."""
