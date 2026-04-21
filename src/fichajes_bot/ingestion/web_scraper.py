@@ -43,8 +43,8 @@ _SITE_SELECTORS: dict[str, dict[str, str]] = {
         "limit_value": ".salary-limit__value, [data-testid='salary-limit']",
     },
     "realmadrid.com": {
-        "article_title": "h1, .article-title",
-        "article_body": ".article-body, .news-content",
+        # .rm-news__list covers listing pages (SSR Angular); fallbacks for article pages
+        "article_body": ".rm-news__list, .article-body, .news-content",
     },
     "rfef.es": {
         "team_row": "table.standings tbody tr",

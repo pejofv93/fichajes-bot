@@ -698,3 +698,73 @@ class TestRssScraperAwait:
             "SELECT last_fetched_at FROM fuentes WHERE fuente_id=?", ["relevo_rss"]
         ))[0]
         assert row["last_fetched_at"] is not None, "last_fetched_at should be set even on 0-item feeds"
+
+
+# ────────────────────────────────────────────────────────────────────────────
+# Web scraper — realmadrid.com selector + recovered sources in DB
+# ────────────────────────────────────────────────────────────────────────────
+
+class TestRealMadridWebScraper:
+    def test_rm_listing_page_uses_rm_news_list_selector(self):
+        """_extract_structured uses .rm-news__list when present on realmadrid.com."""
+        from fichajes_bot.ingestion.web_scraper import _extract_structured
+
+        html = """
+        <html><head><title>Noticias Real Madrid</title></head><body>
+          <nav>nav junk</nav>
+          <div class="rm-news__list">
+            <p class="rm-news-item__excerpt">Real Madrid signa Mbappé</p>
+            <p class="rm-news-item__excerpt">Fichaje confirmado por el club</p>
+          </div>
+          <footer>footer junk</footer>
+        </body></html>
+        """
+        title, text = _extract_structured(html, "https://www.realmadrid.com/es-ES/noticias")
+
+        # Text must come from .rm-news__list, not from nav/footer noise
+        assert "Fichaje confirmado" in text
+        assert "nav junk" not in text
+        assert "footer junk" not in text
+
+    def test_rm_article_page_falls_back_to_body(self):
+        """On article pages without .rm-news__list, falls back gracefully."""
+        from fichajes_bot.ingestion.web_scraper import _extract_structured
+
+        html = """
+        <html><head><title>Artículo RM</title></head><body>
+          <div class="article-body">Texto del artículo sobre el fichaje.</div>
+        </body></html>
+        """
+        title, text = _extract_structured(html, "https://www.realmadrid.com/es-ES/noticias/x/y")
+
+        assert "fichaje" in text.lower()
+
+    @pytest.mark.asyncio
+    async def test_recovered_sources_in_db(self, db):
+        """After migrations, new web sources exist and dead RSS are disabled."""
+        # New web_selectolax sources
+        rows = await db.execute(
+            "SELECT fuente_id, tipo, tier, is_disabled FROM fuentes "
+            "WHERE fuente_id IN ('realmadrid_web_noticias','realmadrid_web_canteras')"
+        )
+        fuente_ids = {r["fuente_id"] for r in rows}
+        assert "realmadrid_web_noticias" in fuente_ids
+        assert "realmadrid_web_canteras" in fuente_ids
+        for r in rows:
+            assert r["tipo"] == "web_selectolax"
+            assert r["is_disabled"] == 0
+
+        # Dead RSS sources disabled
+        dead = await db.execute(
+            "SELECT fuente_id, is_disabled FROM fuentes "
+            "WHERE fuente_id IN ('realmadrid_noticias_rss','realmadrid_canteras_rss','skysport_de_rss')"
+        )
+        for r in dead:
+            assert r["is_disabled"] == 1, f"{r['fuente_id']} should be disabled"
+
+        # kicker promoted to tier S
+        kicker = (await db.execute(
+            "SELECT tier, polling_minutes FROM fuentes WHERE fuente_id='kicker_rss'"
+        ))[0]
+        assert kicker["tier"] == "S"
+        assert kicker["polling_minutes"] == 120
