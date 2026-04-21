@@ -43,6 +43,7 @@ jobs:
         run: |
           pip install uv --quiet
           uv pip install --system -r requirements.lock --quiet
+          uv pip install --system -e . --quiet
 
       - name: Compute date range
         id: dates

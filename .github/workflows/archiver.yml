@@ -26,7 +26,7 @@ jobs:
           python-version: '3.11'
           cache: 'pip'
 
-      - run: pip install uv --quiet && uv pip install --system -r requirements.lock --quiet
+      - run: pip install uv --quiet && uv pip install --system -r requirements.lock --quiet && uv pip install --system -e . --quiet
 
       - name: Nullear HTML bruto de rumores >7 días
         run: python -m fichajes_bot.jobs.cleanup_html

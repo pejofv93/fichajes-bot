@@ -41,7 +41,7 @@ jobs:
         run: pip install uv --quiet
 
       - name: Install dependencies (from lockfile, with cache)
-        run: uv pip install --system -r requirements.lock --quiet
+        run: uv pip install --system -r requirements.lock --quiet && uv pip install --system -e . --quiet
 
       - name: Scrape tier-S sources (RSS + Bluesky)
         run: python -m fichajes_bot.jobs.scrape --tier ${{ github.event.inputs.force_tier || 'S' }}
