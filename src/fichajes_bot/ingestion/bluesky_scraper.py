@@ -38,7 +38,7 @@ class BlueskyScraper:
         except ImportError as exc:
             raise RuntimeError("atproto not installed — run: pip install atproto") from exc
 
-        client = AsyncClient(timeout=15.0)
+        client = AsyncClient()
         await client.login(bsky_handle, bsky_password)
         self._client = client
         return client

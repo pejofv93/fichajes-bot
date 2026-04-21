@@ -127,7 +127,7 @@ class RssScraper:
 
         if not items:
             logger.debug(f"RSS {source['fuente_id']}: 0 entries after filter")
-            _update_fetched(self.db, source["fuente_id"], new_etag, new_modified)
+            await _update_fetched(self.db, source["fuente_id"], new_etag, new_modified)
             return 0
 
         new_items = await filter_new(self.db, items)

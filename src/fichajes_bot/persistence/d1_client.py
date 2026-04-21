@@ -88,8 +88,8 @@ class D1Client:
                 self._sqlite_execute(stmt["sql"], stmt.get("params", []))
             return
         r = await self._client.post(
-            f"/accounts/{self.account_id}/d1/database/{self.database_id}/query",
-            json=statements,
+            f"/accounts/{self.account_id}/d1/database/{self.database_id}/batch",
+            json={"statements": statements},
         )
         r.raise_for_status()
         data = r.json()

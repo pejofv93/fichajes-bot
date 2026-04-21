@@ -592,3 +592,66 @@ class TestScrapeJob:
             "SELECT value FROM metricas_sistema WHERE metric_name='last_hot_loop_at' ORDER BY timestamp DESC LIMIT 1"
         )
         assert rows  # metric was written
+
+
+# ────────────────────────────────────────────────────────────────────────────
+# D1Client — batch endpoint contract
+# ────────────────────────────────────────────────────────────────────────────
+
+class TestD1ClientBatchEndpoint:
+    @pytest.mark.asyncio
+    async def test_execute_batch_uses_batch_endpoint_and_wraps_statements(self):
+        """execute_batch must POST to /batch with {"statements":[...]} — not bare array to /query."""
+        import os
+        from unittest.mock import AsyncMock, MagicMock, patch
+
+        env_overrides = {
+            "D1_MODE": "cloudflare",
+            "CLOUDFLARE_ACCOUNT_ID": "acc123",
+            "CLOUDFLARE_D1_DATABASE_ID": "db456",
+            "CLOUDFLARE_API_TOKEN": "tok789",
+        }
+        stmts = [{"sql": "INSERT INTO metricas_sistema (metric_name) VALUES (?)", "params": ["x"]}]
+
+        with patch.dict(os.environ, env_overrides):
+            from fichajes_bot.persistence.d1_client import D1Client
+
+            client = D1Client()
+
+            mock_response = MagicMock()
+            mock_response.raise_for_status = MagicMock()
+            mock_response.json.return_value = {"success": True, "result": []}
+            client._client.post = AsyncMock(return_value=mock_response)
+
+            await client.execute_batch(stmts)
+
+            call_args = client._client.post.call_args
+            url_arg = call_args[0][0]
+            json_arg = call_args[1]["json"]
+
+        assert url_arg.endswith("/batch"), f"Expected /batch endpoint, got: {url_arg}"
+        assert json_arg == {"statements": stmts}, f"Expected {{statements:[...]}} wrapper, got: {json_arg}"
+
+        await client.close()
+
+
+# ────────────────────────────────────────────────────────────────────────────
+# RSS Scraper — await _update_fetched in 0-items branch
+# ────────────────────────────────────────────────────────────────────────────
+
+class TestRssScraperAwait:
+    @pytest.mark.asyncio
+    async def test_empty_feed_updates_last_fetched_at(self, db):
+        """When feed returns 0 items, last_fetched_at must still be set (await was missing)."""
+        from fichajes_bot.ingestion.rss_scraper import RssScraper
+
+        with patch.object(RssScraper, "_fetch", new_callable=AsyncMock) as mock_fetch:
+            mock_fetch.return_value = (_fake_feed([]), '"etag_empty"', "Mon, 21 Apr 2026")
+            scraper = RssScraper(db)
+            n = await scraper.scrape(SOURCE_RSS)
+
+        assert n == 0
+        row = (await db.execute(
+            "SELECT last_fetched_at FROM fuentes WHERE fuente_id=?", ["relevo_rss"]
+        ))[0]
+        assert row["last_fetched_at"] is not None, "last_fetched_at should be set even on 0-item feeds"
