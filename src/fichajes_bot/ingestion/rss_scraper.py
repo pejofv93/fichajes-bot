@@ -14,7 +14,7 @@ from fichajes_bot.ingestion.deduplication import filter_new, make_hash
 from fichajes_bot.persistence.d1_client import D1Client
 from fichajes_bot.persistence.repositories import RumorRawRepository
 
-_UA = "fichajes-bot/3.1 (+https://github.com/pejofeve/fichajes-bot)"
+_UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/127.0.0.0 Safari/537.36"
 
 
 class RssScraper:

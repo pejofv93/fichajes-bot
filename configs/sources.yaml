@@ -18,11 +18,11 @@
 - id: romano_rss_relevo
   tipo: rss
   tier: S
-  url: https://www.relevo.com/rss/autores/fabrizio-romano.xml
+  url: https://www.caughtoffside.com/author/fabrizio-romano/feed/
   periodista_id: fabrizio-romano
-  idioma: es
+  idioma: en
   polling_minutes: 120
-  nota: "Fallback si Bluesky no tiene el post todavía."
+  nota: "Redundancia RSS Romano. Relevo eliminó feeds de autor (404). caughtoffside verificado 200 OK."
 
 - id: ornstein_bluesky
   tipo: bluesky
@@ -35,26 +35,28 @@
 - id: athletic_rss
   tipo: rss
   tier: S
-  url: https://www.nytimes.com/athletic/rss/soccer
+  url: https://www.nytimes.com/athletic/rss/soccer/
   idioma: en
   polling_minutes: 120
-  nota: "The Athletic = Ornstein + varios tier-S internacionales."
+  nota: "The Athletic = Ornstein + varios tier-S internacionales. Trailing slash fix (308→200)."
 
 - id: relevo_rss
   tipo: rss
   tier: S
-  url: https://www.relevo.com/rss
-  periodista_id_filter: [matteo-moretto]
+  url: "https://news.google.com/rss/search?q=%22Matteo+Moretto%22+fichajes&hl=es&gl=ES&ceid=ES:es"
+  # periodista_id_filter eliminado — Google News no tiene author fields estándar
   idioma: es
   polling_minutes: 120
+  nota: "Moretto vía Google News. Relevo eliminó autor-pages y RSS (404)."
 
 - id: dimarzio_rss
   tipo: rss
   tier: S
-  url: https://www.gianlucadimarzio.com/en/feed
+  url: "https://news.google.com/rss/search?q=%22Di+Marzio%22+calciomercato&hl=it&gl=IT&ceid=IT:it"
   periodista_id: gianluca-di-marzio
   idioma: it
   polling_minutes: 120
+  nota: "gianlucadimarzio.com eliminó RSS (404 en todos los paths). Google News como fallback."
 
 - id: skysport_de_rss
   tipo: rss
