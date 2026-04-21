@@ -7,7 +7,6 @@ dependencies = [
     "feedparser>=6.0",
     "atproto>=0.0.47",
     "selectolax>=0.3.17",
-    "cf-d1-python>=0.1",
     "pydantic>=2.0",
     "google-generativeai>=0.5",
     "pyahocorasick>=2.0",
