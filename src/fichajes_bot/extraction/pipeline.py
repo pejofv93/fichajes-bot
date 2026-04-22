@@ -276,6 +276,26 @@ class ExtractionPipeline:
         jugador_id = await self._upsert_jugador(result)
         result["jugador_id"] = jugador_id
 
+        # Correct tipo for players already at Real Madrid:
+        # news about them is almost always SALIDA/RENOVACION, not FICHAJE.
+        if jugador_id and result.get("tipo_operacion") == "FICHAJE":
+            rows = await self.db.execute(
+                "SELECT club_actual FROM jugadores WHERE jugador_id=?", [jugador_id]
+            )
+            if rows and (rows[0].get("club_actual") or "").lower() == "real madrid":
+                texto = (result.get("texto_fragmento") or "").lower()
+                incoming = any(kw in texto for kw in (
+                    "ficha al", "llega al madrid", "viene al madrid",
+                    "signs for real madrid", "to real madrid", "joins real madrid",
+                    "al real madrid procedente", "procede de", "coming to madrid",
+                ))
+                if not incoming:
+                    result["tipo_operacion"] = "SALIDA"
+                    logger.debug(
+                        f"[{jugador_id[:8]}] Corrected FICHAJE→SALIDA "
+                        f"(existing RM player, no incoming signal)"
+                    )
+
         # Get periodista_id from fuente if available
         periodista_id: Optional[str] = None
         if result.get("fuente_id"):

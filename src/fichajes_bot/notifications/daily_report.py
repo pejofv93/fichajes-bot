@@ -78,11 +78,11 @@ async def generate_daily_report(d1: D1Client) -> str:
           AND entidad = 'primer_equipo'
           AND is_active = 1
           AND (
-            score_smoothed >= 0.10
+            score_smoothed >= 0.05
             OR EXISTS (
               SELECT 1 FROM rumores r
               WHERE r.jugador_id = jugadores.jugador_id
-                AND r.created_at > datetime('now', '-30 days')
+                AND r.created_at > datetime('now', '-60 days')
             )
           )
         ORDER BY score_smoothed DESC LIMIT 20
@@ -102,8 +102,15 @@ async def generate_daily_report(d1: D1Client) -> str:
                flags, factores_actuales
         FROM jugadores
         WHERE entidad IN ('castilla', 'juvenil_a')
-          AND score_smoothed >= 0.3
           AND is_active = 1
+          AND (
+            score_smoothed >= 0.05
+            OR EXISTS (
+              SELECT 1 FROM rumores r
+              WHERE r.jugador_id = jugadores.jugador_id
+                AND r.created_at > datetime('now', '-60 days')
+            )
+          )
         ORDER BY entidad, score_smoothed DESC LIMIT 15
     """)
 
@@ -142,14 +149,9 @@ async def generate_daily_report(d1: D1Client) -> str:
         "🏆 *TOP 20 FICHAJES*",
     ]
 
-    if len(fichajes) >= 3:
+    if fichajes:
         for i, r in enumerate(fichajes):
             lines.append(_player_line(r, i))
-    elif fichajes:
-        # 1-2 jugadores con datos reales — mostrarlos igualmente
-        for i, r in enumerate(fichajes):
-            lines.append(_player_line(r, i))
-        lines.append("_Pocos movimientos esta semana — mercado tranquilo_ 😴")
     else:
         lines.append("_Pocos movimientos esta semana — mercado tranquilo_ 😴")
     lines.append("")
@@ -161,55 +163,6 @@ async def generate_daily_report(d1: D1Client) -> str:
     else:
         lines.append("_Sin datos todavía_")
     lines.append("")
-
-    castilla = [r for r in cantera_rows if r.get("entidad") == "castilla"]
-    juvenil = [r for r in cantera_rows if r.get("entidad") == "juvenil_a"]
-
-    # Fetch cedidos with rendimiento metrics
-    cedidos_with_metrics = await d1.execute("""
-        SELECT j.nombre_canonico, j.score_smoothed, j.entidad,
-               rc.club_cesion, rc.partidos, rc.minutos, rc.goles,
-               rc.asistencias, rc.rating_medio
-        FROM jugadores j
-        LEFT JOIN rendimiento_cedidos rc ON j.jugador_id = rc.jugador_id
-        WHERE j.entidad = 'cedido' AND j.is_active = 1
-          AND j.score_smoothed >= 0.3
-        ORDER BY rc.rating_medio DESC NULLS LAST LIMIT 5
-    """)
-
-    # Top cantera candidates
-    top_castilla = castilla[:5]
-    top_juvenil = juvenil[:3]
-
-    # Show cantera section if any players exist; cedidos subsection only with metrics
-    has_cantera = bool(top_castilla or top_juvenil or cedidos_with_metrics)
-
-    if has_cantera:
-        lines.append("⭐ *CANTERA*")
-        if top_castilla:
-            lines.append("_Castilla (top 5 con movimientos):_")
-            for i, r in enumerate(top_castilla):
-                factores = _parse_flags(r.get("factores_actuales"))
-                primer = round((factores.get("score_primer_equipo") or 0) * 100) if isinstance(factores, dict) else 0
-                line = _player_line(r, i)
-                if primer > 0:
-                    line += f" · 🎯debut:{primer}%"
-                lines.append(line)
-        if top_juvenil:
-            lines.append("_Juvenil A (top 3):_")
-            for i, r in enumerate(top_juvenil):
-                lines.append(_player_line(r, i))
-        if cedidos_with_metrics:
-            lines.append("_Cedidos destacados:_")
-            for r in cedidos_with_metrics[:3]:
-                nombre = r.get("nombre_canonico") or "?"
-                club = r.get("club_cesion") or "?"
-                rating = r.get("rating_medio")
-                goles = r.get("goles") or 0
-                asist = r.get("asistencias") or 0
-                rating_str = f" ⭐{rating:.1f}" if rating else ""
-                lines.append(f"• *{nombre}* @ {club} · ⚽{goles} 🅰️{asist}{rating_str}")
-        lines.append("")
 
     if retractados:
         lines.append("🚫 *RUMORES RETRACTADOS HOY*")
@@ -230,10 +183,52 @@ async def generate_daily_report(d1: D1Client) -> str:
             lines.append(f"• *{r['nombre_canonico']}* {pct_delta} — {razon}")
     else:
         lines.append("_Sin cambios significativos hoy_")
+    lines.append("")
+
+    # ── Castilla & Cantera — always shown at end ───────────────────────────
+    castilla = [r for r in cantera_rows if r.get("entidad") == "castilla"]
+    juvenil  = [r for r in cantera_rows if r.get("entidad") == "juvenil_a"]
+
+    cedidos_with_metrics = await d1.execute("""
+        SELECT j.nombre_canonico, j.score_smoothed,
+               rc.club_cesion, rc.goles, rc.asistencias, rc.rating_medio
+        FROM jugadores j
+        LEFT JOIN rendimiento_cedidos rc ON j.jugador_id = rc.jugador_id
+        WHERE j.entidad = 'cedido' AND j.is_active = 1
+          AND (j.score_smoothed >= 0.05 OR rc.rating_medio IS NOT NULL)
+        ORDER BY rc.rating_medio DESC NULLS LAST LIMIT 5
+    """)
+
+    lines.append("🏟️ *CASTILLA & CANTERA*")
+    if castilla:
+        lines.append("_Castilla (top 5):_")
+        for i, r in enumerate(castilla[:5]):
+            factores = _parse_flags(r.get("factores_actuales"))
+            primer = round((factores.get("score_primer_equipo") or 0) * 100) if isinstance(factores, dict) else 0
+            line = _player_line(r, i)
+            if primer > 0:
+                line += f" · 🎯debut:{primer}%"
+            lines.append(line)
+    if juvenil:
+        lines.append("_Juvenil A (top 3):_")
+        for i, r in enumerate(juvenil[:3]):
+            lines.append(_player_line(r, i))
+    if cedidos_with_metrics:
+        lines.append("_Cedidos destacados:_")
+        for r in cedidos_with_metrics[:3]:
+            nombre = r.get("nombre_canonico") or "?"
+            club   = r.get("club_cesion") or "?"
+            rating = r.get("rating_medio")
+            goles  = r.get("goles") or 0
+            asist  = r.get("asistencias") or 0
+            rating_str = f" ⭐{rating:.1f}" if rating else ""
+            lines.append(f"• *{nombre}* @ {club} · ⚽{goles} 🅰️{asist}{rating_str}")
+    if not castilla and not juvenil and not cedidos_with_metrics:
+        lines.append("_Sin movimientos en cantera_")
 
     logger.info(
         f"Daily report generated: {len(fichajes)} fichajes, "
         f"{len(salidas)} salidas, "
-        f"{len(top_castilla) + len(top_juvenil) + len(cedidos_with_metrics)} cantera entries"
+        f"{len(castilla) + len(juvenil) + len(cedidos_with_metrics)} cantera entries"
     )
     return "\n".join(lines)
