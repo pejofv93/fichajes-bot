@@ -168,18 +168,20 @@ class TestTrialBalloonDetector:
         await _insert_fuente(db, fid2, sesgo="neutral", tier="S")
         await _insert_jugador(db, jid, "Top Target")
 
+        from datetime import datetime, timezone, timedelta
+        now = datetime.now(timezone.utc)
         rumores = [
             {
                 "rumor_id": _uid(), "jugador_id": jid,
                 "periodista_id": pid1, "fuente_id": fid1,
                 "tipo_operacion": "FICHAJE", "texto_fragmento": "here we go",
-                "fecha_publicacion": "2026-04-20T10:00:00",
+                "fecha_publicacion": (now - timedelta(hours=4)).isoformat(),
             },
             {
                 "rumor_id": _uid(), "jugador_id": jid,
                 "periodista_id": pid2, "fuente_id": fid2,
                 "tipo_operacion": "FICHAJE", "texto_fragmento": "confirmed by sources",
-                "fecha_publicacion": "2026-04-20T11:00:00",
+                "fecha_publicacion": (now - timedelta(hours=2)).isoformat(),
             },
         ]
 
