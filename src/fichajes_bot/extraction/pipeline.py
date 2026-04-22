@@ -278,23 +278,34 @@ class ExtractionPipeline:
 
         # Correct tipo for players already at Real Madrid:
         # news about them is almost always SALIDA/RENOVACION, not FICHAJE.
+        # Also catches auto-created players (club_actual=NULL) that match
+        # known RM squad names via the _KNOWN_NAMES list in regex_extractor.
         if jugador_id and result.get("tipo_operacion") == "FICHAJE":
             rows = await self.db.execute(
-                "SELECT club_actual FROM jugadores WHERE jugador_id=?", [jugador_id]
+                "SELECT club_actual, nombre_canonico FROM jugadores WHERE jugador_id=?",
+                [jugador_id],
             )
-            if rows and (rows[0].get("club_actual") or "").lower() == "real madrid":
-                texto = (result.get("texto_fragmento") or "").lower()
-                incoming = any(kw in texto for kw in (
-                    "ficha al", "llega al madrid", "viene al madrid",
-                    "signs for real madrid", "to real madrid", "joins real madrid",
-                    "al real madrid procedente", "procede de", "coming to madrid",
-                ))
-                if not incoming:
-                    result["tipo_operacion"] = "SALIDA"
-                    logger.debug(
-                        f"[{jugador_id[:8]}] Corrected FICHAJE→SALIDA "
-                        f"(existing RM player, no incoming signal)"
-                    )
+            if rows:
+                club = (rows[0].get("club_actual") or "").lower()
+                nombre = (rows[0].get("nombre_canonico") or "").lower()
+                from fichajes_bot.extraction.regex_extractor import _KNOWN_NAMES
+                is_rm_player = (
+                    club == "real madrid"
+                    or any(n.lower() in nombre for n in _KNOWN_NAMES)
+                )
+                if is_rm_player:
+                    texto = (result.get("texto_fragmento") or "").lower()
+                    incoming = any(kw in texto for kw in (
+                        "ficha al", "llega al madrid", "viene al madrid",
+                        "signs for real madrid", "to real madrid", "joins real madrid",
+                        "al real madrid procedente", "procede de", "coming to madrid",
+                    ))
+                    if not incoming:
+                        result["tipo_operacion"] = "SALIDA"
+                        logger.debug(
+                            f"[{jugador_id[:8]}] Corrected FICHAJE→SALIDA "
+                            f"(RM player '{rows[0].get('nombre_canonico')}', no incoming signal)"
+                        )
 
         # Get periodista_id from fuente if available
         periodista_id: Optional[str] = None
