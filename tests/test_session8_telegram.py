@@ -268,17 +268,18 @@ async def test_daily_report_cantera_section_present(db):
 
 @pytest.mark.asyncio
 async def test_daily_report_cantera_section_absent_when_no_data(db):
-    """CANTERA section is omitted when no cantera players have score >= 0.3."""
+    """Players below threshold (0.05) don't appear; section shows fallback text."""
     from fichajes_bot.notifications.daily_report import generate_daily_report
 
     # Insert cantera player below threshold
     await _insert_jugador(
         db, nombre="Low Score Kid", tipo="FICHAJE",
-        entidad="castilla", score=0.2
+        entidad="castilla", score=0.01
     )
 
     report = await generate_daily_report(db)
-    assert "CANTERA" not in report
+    assert "Low Score Kid" not in report
+    assert "Sin movimientos en cantera" in report
 
 
 @pytest.mark.asyncio
