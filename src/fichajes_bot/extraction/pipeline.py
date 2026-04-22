@@ -327,7 +327,11 @@ class ExtractionPipeline:
         )
 
     async def _upsert_jugador(self, result: dict[str, Any]) -> Optional[str]:
-        """Find or create a jugador by name. Returns jugador_id or None."""
+        """Find or create a jugador by name. Returns jugador_id or None.
+
+        Auto-creates only when confianza >= 0.6 — low-confidence extractions
+        should not pollute the jugadores table with false positives.
+        """
         nombre = result.get("jugador_nombre")
         if not nombre:
             return None
@@ -341,28 +345,50 @@ class ExtractionPipeline:
         if rows:
             return rows[0]["jugador_id"]
 
-        # Try fuzzy match via LIKE (simple, good enough for bootstrap)
+        # Try fuzzy match via LIKE
         rows = await self.db.execute(
-            "SELECT jugador_id, nombre_canonico FROM jugadores "
+            "SELECT jugador_id FROM jugadores "
             "WHERE LOWER(nombre_canonico) LIKE LOWER(?) LIMIT 1",
             [f"%{nombre[:15]}%"],
         )
         if rows:
             return rows[0]["jugador_id"]
 
-        # Create new jugador
+        # Only auto-create with sufficient extraction confidence
+        conf = result.get("confianza_extraccion") or 0.0
+        if conf < 0.6:
+            logger.debug(
+                f"_upsert_jugador: skip auto-create '{nombre}' "
+                f"conf={conf:.2f} < 0.60"
+            )
+            return None
+
+        # Detect entidad from title/fragment text
+        texto = (result.get("texto_fragmento") or "").lower()
+        entidad = (
+            "castilla"
+            if any(kw in texto for kw in ("castilla", "filial", "rm castilla", "real madrid castilla"))
+            else "primer_equipo"
+        )
+
+        tipo = result.get("tipo_operacion") or "FICHAJE"
+
         jid = str(uuid.uuid4())
-        tipo = result.get("tipo_operacion", "FICHAJE")
         await self.db.execute(
             """INSERT OR IGNORE INTO jugadores
                (jugador_id, nombre_canonico, slug, tipo_operacion_principal,
-                score_raw, score_smoothed, kalman_P, flags, factores_actuales,
-                n_rumores_total, primera_mencion_at, ultima_actualizacion_at,
+                entidad, score_raw, score_smoothed, kalman_P,
+                flags, factores_actuales, n_rumores_total,
+                primera_mencion_at, ultima_actualizacion_at,
                 is_active, created_at)
-               VALUES (?,?,?,?,0.0,0.0,1.0,'[]','{}',1,datetime('now'),datetime('now'),1,datetime('now'))""",
-            [jid, nombre, sl, tipo],
+               VALUES (?,?,?,?,?,0.01,0.01,1.0,'[]','{}',1,
+                       datetime('now'),datetime('now'),1,datetime('now'))""",
+            [jid, nombre, sl, tipo, entidad],
         )
-        logger.info(f"New jugador created: {nombre} ({jid[:8]}…)")
+        logger.info(
+            f"Auto-created jugador: '{nombre}' tipo={tipo} entidad={entidad} "
+            f"conf={conf:.2f} ({jid[:8]}…)"
+        )
         return jid
 
 
