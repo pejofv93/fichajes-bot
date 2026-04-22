@@ -445,14 +445,14 @@ async def test_explain_command_equivalent(db):
 @pytest.mark.asyncio
 async def test_detalle_command_equivalent(db):
     """/detalle equivalent: returns complete jugador info."""
-    jid = await _insert_jugador(db, nombre="Trent Alexander-Arnold", tipo="FICHAJE", score=0.78)
+    jid = await _insert_jugador(db, nombre="Test Detalle Player", tipo="FICHAJE", score=0.78)
 
     row = await db.execute(
         "SELECT * FROM jugadores WHERE jugador_id = ?", [jid]
     )
     assert len(row) == 1
     j = row[0]
-    assert j["nombre_canonico"] == "Trent Alexander-Arnold"
+    assert j["nombre_canonico"] == "Test Detalle Player"
     assert j["tipo_operacion_principal"] == "FICHAJE"
     assert j["score_smoothed"] == pytest.approx(0.78, abs=1e-6)
 

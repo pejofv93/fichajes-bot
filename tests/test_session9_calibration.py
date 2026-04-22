@@ -76,7 +76,7 @@ async def test_official_detection_flag_fichaje_oficial(db):
     from fichajes_bot.calibration.official_events_detector import OfficialEventsDetector
 
     await _insert_periodista(db, "fabrizio-romano")
-    jid = await _insert_jugador(db, "Jude Bellingham", tipo="FICHAJE")
+    jid = await _insert_jugador(db, "Test Official A", tipo="FICHAJE")
     await _insert_rumor(
         db, jid, "fabrizio-romano", tipo="FICHAJE",
         flags=json.dumps(["FICHAJE_OFICIAL"]),
@@ -98,7 +98,7 @@ async def test_official_detection_official_source(db):
     """Rumor from marca-rm-oficial → outcome detected."""
     from fichajes_bot.calibration.official_events_detector import OfficialEventsDetector
 
-    jid = await _insert_jugador(db, "Antonio Rüdiger", tipo="FICHAJE")
+    jid = await _insert_jugador(db, "Test Official B", tipo="FICHAJE")
     await _insert_rumor(
         db, jid, "marca-rm-oficial", tipo="FICHAJE",
         flags="[]",
@@ -146,7 +146,7 @@ async def test_official_detection_idempotent(db):
     from fichajes_bot.calibration.official_events_detector import OfficialEventsDetector
 
     await _insert_periodista(db, "fabrizio-romano")
-    jid = await _insert_jugador(db, "Tchouameni", tipo="FICHAJE")
+    jid = await _insert_jugador(db, "Test Official C", tipo="FICHAJE")
     await _insert_rumor(
         db, jid, "fabrizio-romano", tipo="FICHAJE",
         flags=json.dumps(["FICHAJE_OFICIAL"]),
@@ -168,7 +168,7 @@ async def test_official_detection_marks_confirming_rumors(db):
 
     await _insert_periodista(db, "fabrizio-romano")
     await _insert_periodista(db, "matteo-moretto")
-    jid = await _insert_jugador(db, "Camavinga", tipo="FICHAJE")
+    jid = await _insert_jugador(db, "Test Official D", tipo="FICHAJE")
 
     rid_fichaje = await _insert_rumor(
         db, jid, "matteo-moretto", tipo="FICHAJE", flags="[]", fecha="2024-03-01"
@@ -193,7 +193,7 @@ async def test_official_detection_inserts_outcomes_historicos(db):
     from fichajes_bot.calibration.official_events_detector import OfficialEventsDetector
 
     await _insert_periodista(db, "fabrizio-romano")
-    jid = await _insert_jugador(db, "Bellingham Test", tipo="FICHAJE")
+    jid = await _insert_jugador(db, "Test Official E", tipo="FICHAJE")
     await _insert_rumor(
         db, jid, "fabrizio-romano", tipo="FICHAJE",
         flags=json.dumps(["FICHAJE_OFICIAL"]),
@@ -478,7 +478,7 @@ async def test_backfill_run_end_to_end(db):
     await _insert_periodista(db, "matteo-moretto", reliability=0.84)
 
     # Transfer 1: confirmed FICHAJE
-    j1 = await _insert_jugador(db, "Jude Bellingham Mock", tipo="FICHAJE")
+    j1 = await _insert_jugador(db, "Test Backfill A", tipo="FICHAJE")
     rid_conf = await _insert_rumor(
         db, j1, "fabrizio-romano", tipo="FICHAJE",
         flags=json.dumps(["FICHAJE_OFICIAL"]),
@@ -490,7 +490,7 @@ async def test_backfill_run_end_to_end(db):
     )
 
     # Transfer 2: failed operation
-    j2 = await _insert_jugador(db, "Erling Haaland Mock", tipo="FICHAJE")
+    j2 = await _insert_jugador(db, "Test Backfill B", tipo="FICHAJE")
     await _insert_rumor(
         db, j2, "matteo-moretto", tipo="FICHAJE",
         fase=3, fecha="2022-03-01",

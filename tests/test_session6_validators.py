@@ -177,16 +177,16 @@ class TestSubstitutionEngine:
         militao_id = _uid()
         huijsen_id = _uid()
 
-        await _insert_jugador(db, militao_id, "Militao", "CB",
+        await _insert_jugador(db, militao_id, "Test Salida CB", "CB",
                                tipo="SALIDA", score=0.75)
-        await _insert_jugador(db, huijsen_id, "Huijsen", "CB",
+        await _insert_jugador(db, huijsen_id, "Test Fichaje CB", "CB",
                                tipo="FICHAJE", score=0.45)
 
         engine = SubstitutionEngine(db)
         factor = await engine.evaluate(huijsen_id)
 
         assert factor > 1.2, (
-            f"Huijsen should benefit from Militao's imminent departure, got factor={factor}"
+            f"Test Fichaje CB should benefit from Test Salida CB's imminent departure, got factor={factor}"
         )
 
     @pytest.mark.asyncio
@@ -424,7 +424,7 @@ class TestModifiersIntegration:
 
         # Seed jugador (no rivals → HUECO_NATURAL)
         jugador_id = _uid()
-        await _insert_jugador(db, jugador_id, "Mbappé", "LW",
+        await _insert_jugador(db, jugador_id, "Test Target LW", "LW",
                                tipo="FICHAJE", score=0.60, valor_mercado_m=60.0)
 
         # Patch date to August (verano window → boost)

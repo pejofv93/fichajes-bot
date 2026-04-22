@@ -96,11 +96,11 @@ async def test_alert_crossing_up(db):
     """Score crossing 70% from below triggers ALERTA_ALTA."""
     from fichajes_bot.notifications.alert_manager import AlertManager
 
-    jid = await _insert_jugador(db, "Mbappé Test", score=0.72)
+    jid = await _insert_jugador(db, "Test Alert Up", score=0.72)
     sender = _make_sender()
     mgr = AlertManager(db, sender)
 
-    jugador = {"jugador_id": jid, "nombre_canonico": "Mbappé Test", "score_smoothed": 0.72}
+    jugador = {"jugador_id": jid, "nombre_canonico": "Test Alert Up", "score_smoothed": 0.72}
     alerts = mgr.detect_alert_triggers(
         jugador_id=jid,
         score_anterior=0.65,
@@ -266,11 +266,11 @@ async def test_corroboracion_tier_s(db):
     """New tier-S journalist on player with existing rumors triggers CORROBORACION."""
     from fichajes_bot.notifications.alert_manager import AlertManager
 
-    jid = await _insert_jugador(db, "Mbappé Corroborado", score=0.70)
+    jid = await _insert_jugador(db, "Test Alert Corroboracion", score=0.70)
     sender = _make_sender()
     mgr = AlertManager(db, sender)
 
-    jugador = {"jugador_id": jid, "nombre_canonico": "Mbappé Corroborado", "score_smoothed": 0.70}
+    jugador = {"jugador_id": jid, "nombre_canonico": "Test Alert Corroboracion", "score_smoothed": 0.70}
     nuevo_periodista = {"periodista_id": "fabrizio-romano", "nombre_completo": "Fabrizio Romano", "tier": "S"}
     alerts = mgr.detect_alert_triggers(
         jugador_id=jid,
@@ -314,7 +314,7 @@ async def test_explain_extended_includes_all_sections(db):
     }
     jid = await _insert_jugador(
         db,
-        "Bellingham Extended",
+        "Test Explain Extended",
         score=0.78,
         flags=["POSIBLE_GLOBO_SONDA"],
         factores=factores,

@@ -438,12 +438,12 @@ class TestRetractionHandler:
 
         await _insert_periodista(db, pid, tier="S", nombre="Fabrizio Romano")
         await _insert_fuente(db, fid, sesgo="neutral", tier="S")
-        await _insert_jugador(db, jid, "Mbappé")
+        await _insert_jugador(db, jid, "Test Retraction Player")
 
         # Insert the original positive rumor
         await _insert_rumor(
             db, rumor1_id, jid, pid, fid,
-            texto="here we go Mbappé to Real Madrid!",
+            texto="here we go Test Player to Real Madrid!",
             tipo="FICHAJE", days_ago=2,
         )
 
