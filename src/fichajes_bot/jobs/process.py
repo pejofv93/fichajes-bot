@@ -40,14 +40,18 @@ async def run(limit: int = 100) -> dict[str, int]:
         pipeline = ExtractionPipeline(db)
 
         n_regex = n_gemini = n_discarded = 0
+        reject_counts: dict[str, int] = {}
 
         for item in items:
             raw_id = item["raw_id"]
             try:
+                pipeline._last_reject_reason = ""
                 result = await pipeline.process(item)
 
                 if result is None:
-                    await raw_repo.mark_processed(raw_id, descartado=True, motivo="no_match")
+                    motivo = pipeline._last_reject_reason or "no_match"
+                    await raw_repo.mark_processed(raw_id, descartado=True, motivo=motivo)
+                    reject_counts[motivo] = reject_counts.get(motivo, 0) + 1
                     n_discarded += 1
                 else:
                     await raw_repo.mark_processed(raw_id)
@@ -65,6 +69,10 @@ async def run(limit: int = 100) -> dict[str, int]:
                 except Exception:
                     pass
                 n_discarded += 1
+
+        if reject_counts:
+            breakdown = " | ".join(f"{k}={v}" for k, v in sorted(reject_counts.items(), key=lambda x: -x[1]))
+            logger.info(f"process discard breakdown: {breakdown}")
 
         # ── Metrics ───────────────────────────────────────────────────────────
         n_total = n_regex + n_gemini

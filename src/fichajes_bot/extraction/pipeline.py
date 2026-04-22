@@ -41,11 +41,10 @@ class ExtractionPipeline:
         self._lexicon: Optional[LexiconMatcher] = None
         self._regex = RegexExtractor()
         self._gemini = GeminiClient(db)
-        # Reliability manager — lazy init, used by Session 5 scoring
         self._reliability: Optional[ReliabilityManager] = None
-        # Session 7 detectors — lazy init
         self._retraction_handler = None
         self._hard_signal_detector = None
+        self._last_reject_reason: str = ""
 
     async def get_reliability_manager(self) -> ReliabilityManager:
         """Lazy-initialised ReliabilityManager for use by downstream sessions."""
@@ -71,13 +70,22 @@ class ExtractionPipeline:
 
     async def process(self, raw: dict[str, Any]) -> Optional[dict[str, Any]]:
         """Process one raw rumor. Returns extraction dict or None."""
+        rid = (raw.get("raw_id") or "?")[:8]
+        fuente = raw.get("fuente_id", "?")
+
         text = (raw.get("texto_completo") or raw.get("titulo") or "").strip()
         if not text:
+            logger.debug(f"[{rid}] SKIP empty_text fuente={fuente}")
+            self._last_reject_reason = "empty_text"
             return None
 
         # ── Step 1: Prefilter ────────────────────────────────────────────────
         if not prefilter(text):
+            logger.debug(f"[{rid}] SKIP prefilter fuente={fuente} title={raw.get('titulo','')[:60]!r}")
+            self._last_reject_reason = "prefilter"
             return None
+
+        logger.debug(f"[{rid}] PASS prefilter fuente={fuente}")
 
         # ── Step 2: Language ─────────────────────────────────────────────────
         idioma = raw.get("idioma_detectado") or detect_language(text)
@@ -106,12 +114,20 @@ class ExtractionPipeline:
             or lex_tipo
         )
 
+        logger.debug(
+            f"[{rid}] conf={conf:.2f} tipo={tipo} "
+            f"lex_matches={len(lex_matches)} regex={'OK' if regex_result else 'None'} "
+            f"jugador={getattr(regex_result, 'jugador_nombre', None)!r}"
+        )
+
         if not tipo and conf < 0.3:
-            # No signal at all — discard
+            logger.debug(f"[{rid}] SKIP no_signal conf={conf:.2f} tipo=None")
+            self._last_reject_reason = "no_signal"
             return None
 
         # ── Step 6: Accept regex without LLM ─────────────────────────────────
         if conf >= THRESHOLD and tipo:
+            logger.info(f"[{rid}] ACCEPT regex conf={conf:.2f} tipo={tipo} jugador={getattr(regex_result, 'jugador_nombre', None)!r}")
             result = self._build_result(
                 raw, regex_result, lex_matches, lex_weight, lex_fase,
                 tipo, idioma, conf, "regex",
@@ -121,6 +137,7 @@ class ExtractionPipeline:
             return result
 
         # ── Step 7: Gemini fallback ───────────────────────────────────────────
+        logger.debug(f"[{rid}] calling Gemini conf={conf:.2f} tipo={tipo}")
         gemini_result: Optional[dict] = None
         try:
             gemini_result = await self._gemini.extract(text, idioma)
@@ -129,7 +146,11 @@ class ExtractionPipeline:
         except Exception as exc:
             logger.warning(f"Gemini unexpected error: {exc}")
 
+        if gemini_result:
+            logger.debug(f"[{rid}] Gemini → es_rm={gemini_result.get('es_real_madrid')} tipo={gemini_result.get('tipo_operacion')} jugador={gemini_result.get('jugador_nombre')!r}")
+
         if gemini_result and gemini_result.get("es_real_madrid"):
+            logger.info(f"[{rid}] ACCEPT gemini jugador={gemini_result.get('jugador_nombre')!r}")
             result = self._build_from_gemini(raw, gemini_result, lex_weight, idioma)
             await self._persist(result)
             await self._post_process(result)
@@ -137,6 +158,7 @@ class ExtractionPipeline:
 
         # ── Step 8: Fallback — accept weak regex if tipo is known ─────────────
         if tipo and (regex_result or lex_tipo):
+            logger.info(f"[{rid}] ACCEPT fallback conf={conf:.2f} tipo={tipo} jugador={getattr(regex_result, 'jugador_nombre', None)!r}")
             result = self._build_result(
                 raw, regex_result, lex_matches, lex_weight, lex_fase,
                 tipo, idioma, conf, "regex",
@@ -145,6 +167,8 @@ class ExtractionPipeline:
             await self._post_process(result)
             return result
 
+        logger.debug(f"[{rid}] SKIP no_extraction conf={conf:.2f} tipo={tipo} gemini={'no_rm' if gemini_result else 'None'}")
+        self._last_reject_reason = "no_extraction"
         return None
 
     # ── Result builders ───────────────────────────────────────────────────────
