@@ -77,6 +77,14 @@ async def generate_daily_report(d1: D1Client) -> str:
         WHERE tipo_operacion_principal = 'FICHAJE'
           AND entidad = 'primer_equipo'
           AND is_active = 1
+          AND (
+            score_smoothed >= 0.10
+            OR EXISTS (
+              SELECT 1 FROM rumores r
+              WHERE r.jugador_id = jugadores.jugador_id
+                AND r.created_at > datetime('now', '-30 days')
+            )
+          )
         ORDER BY score_smoothed DESC LIMIT 20
     """)
 
@@ -134,11 +142,16 @@ async def generate_daily_report(d1: D1Client) -> str:
         "🏆 *TOP 20 FICHAJES*",
     ]
 
-    if fichajes:
+    if len(fichajes) >= 3:
         for i, r in enumerate(fichajes):
             lines.append(_player_line(r, i))
+    elif fichajes:
+        # 1-2 jugadores con datos reales — mostrarlos igualmente
+        for i, r in enumerate(fichajes):
+            lines.append(_player_line(r, i))
+        lines.append("_Pocos movimientos esta semana — mercado tranquilo_ 😴")
     else:
-        lines.append("_Sin datos todavía_")
+        lines.append("_Pocos movimientos esta semana — mercado tranquilo_ 😴")
     lines.append("")
 
     lines.append("📤 *TOP 10 SALIDAS*")
