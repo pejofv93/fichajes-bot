@@ -431,15 +431,15 @@ async def test_top_command_equivalent(db):
 @pytest.mark.asyncio
 async def test_explain_command_equivalent(db):
     """/explain equivalent: jugador lookup by partial name."""
-    jid = await _insert_jugador(db, nombre="Kylian Mbappé", tipo="FICHAJE", score=0.92)
+    jid = await _insert_jugador(db, nombre="Test Player Explain XYZ", tipo="FICHAJE", score=0.92)
 
     row = await db.execute(
         "SELECT * FROM jugadores WHERE LOWER(nombre_canonico) LIKE LOWER(?) LIMIT 1",
-        ["%mbapp%"],
+        ["%explain xyz%"],
     )
     assert len(row) == 1
     assert row[0]["jugador_id"] == jid
-    assert row[0]["nombre_canonico"] == "Kylian Mbappé"
+    assert row[0]["nombre_canonico"] == "Test Player Explain XYZ"
 
 
 @pytest.mark.asyncio
