@@ -282,6 +282,22 @@ _CLUB_RE = re.compile(
     re.IGNORECASE,
 )
 
+# Names that must never be identified as players (media, brands, phrases)
+_NAME_BLACKLIST: frozenset[str] = frozenset({
+    # Phrases
+    "Real Madrid", "Transfer News", "Breaking News", "Here We Go",
+    "Done Deal", "Transfer Talk", "Transfer Window", "Premier League",
+    "Champions League", "Europa League", "La Liga", "Serie",
+    # Journalists / analysts
+    "Fabrizio Romano", "David Ornstein", "Matteo Moretto", "Gianluca Di",
+    # Media outlets
+    "Sports Illustrated", "Sky Sports", "BBC Sport", "The Athletic",
+    "Marca", "Mundo Deportivo", "Cadena Ser", "Relevo", "Kicker",
+    "Gazzetta Dello", "France Football", "Daily Mail", "Daily Mirror",
+    "Goal", "ESPN", "CBS Sports", "NBC Sports", "Caught Offside",
+    "Football Insider", "Football Italia", "Bild", "Der Spiegel",
+})
+
 
 class RegexExtractor:
     """Stateless regex-based extractor. Thread-safe."""
@@ -340,13 +356,8 @@ class RegexExtractor:
             return m.group(1)
         # Generic Name Surname pattern (lower precision)
         candidates = _GENERIC_NAME_RE.findall(text[:600])
-        # Filter out common non-name words
-        _STOP = frozenset({
-            "Real Madrid", "Transfer News", "Breaking News", "Here We Go",
-            "Done Deal", "Fabrizio Romano", "David Ornstein",
-        })
         for c in candidates:
-            if c not in _STOP and len(c) > 4:
+            if c not in _NAME_BLACKLIST and len(c) > 4:
                 return c
         return None
 
