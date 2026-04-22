@@ -21,7 +21,7 @@ _HEADERS = {
     "User-Agent": _UA,
     "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
     "Accept-Language": "es,en;q=0.9",
-    "Accept-Encoding": "gzip, deflate, br",
+    "Accept-Encoding": "identity",  # disable compression — avoids binary garbage in selectolax
 }
 
 # Per-domain last-fetch timestamps (process-local)
