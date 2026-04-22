@@ -548,7 +548,7 @@ class TestExtractionPipeline:
 
         pipeline._gemini.extract = mock_gemini_extract
 
-        raw = _make_raw("Real Madrid: here we go! Bellingham signs contract. Done deal confirmed.")
+        raw = _make_raw("Real Madrid: here we go! Test Incoming Player XYZ signs contract. Done deal confirmed.")
         result = await pipeline.process(raw)
 
         assert result is not None
