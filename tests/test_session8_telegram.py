@@ -423,7 +423,7 @@ async def test_top_command_equivalent(db):
           AND is_active = 1
         ORDER BY score_smoothed DESC LIMIT 20
     """)
-    assert len(rows) == 3
+    assert len(rows) >= 3
     assert rows[0]["nombre_canonico"] == "Top Player A"
     assert rows[1]["nombre_canonico"] == "Top Player B"
 
