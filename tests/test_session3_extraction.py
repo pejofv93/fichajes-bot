@@ -642,7 +642,7 @@ class TestExtractionPipeline:
         pipeline._gemini.extract = AsyncMock(return_value=None)
 
         raw = _make_raw(
-            "Real Madrid: here we go! Bellingham signs 5-year contract. Done deal.",
+            "Real Madrid: here we go! Test Incoming Player XYZ signs 5-year contract. Done deal.",
             idioma="en",
         )
         result = await pipeline.process(raw)
@@ -663,7 +663,7 @@ class TestExtractionPipeline:
         pipeline._gemini.extract = AsyncMock(return_value=None)
 
         raw = _make_raw(
-            "Here we go! Real Madrid sign Bellingham – contract agreed done deal.",
+            "Here we go! Real Madrid sign Test Incoming Player XYZ – contract agreed done deal.",
             idioma="en",
         )
         result = await pipeline.process(raw)
@@ -713,7 +713,7 @@ class TestProcessJob:
                 "raw_id": str(uuid.uuid4()),
                 "fuente_id": "romano_bluesky",
                 "titulo": "Real Madrid: here we go! Done deal contract signed.",
-                "texto_completo": "Real Madrid: here we go! Done deal, contract signed. Bellingham.",
+                "texto_completo": "Real Madrid: here we go! Done deal, contract signed. Test Player XYZ.",
                 "idioma_detectado": "en",
                 "hash_dedup": make_hash(f"url{i}", f"title{i}"),
                 "procesado": 0,
