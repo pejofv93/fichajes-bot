@@ -85,6 +85,17 @@ class AsyncTelegramSender:
             if r.status_code == 200:
                 return True
 
+            # 400 with parse_mode → markdown entity error; retry as plain text
+            if r.status_code == 400 and parse_mode:
+                logger.warning(
+                    f"Telegram 400 (markdown parse error) — "
+                    f"retrying without parse_mode. body={r.text[:200]}"
+                )
+                plain_payload = {k: v for k, v in payload.items() if k != "parse_mode"}
+                r = await client.post(url, json=plain_payload)
+                if r.status_code == 200:
+                    return True
+
             logger.error(
                 f"Telegram sendMessage failed: status={r.status_code} "
                 f"body={r.text[:200]}"
