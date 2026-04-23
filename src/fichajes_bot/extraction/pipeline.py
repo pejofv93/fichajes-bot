@@ -33,11 +33,57 @@ from fichajes_bot.extraction.regex_extractor import RegexExtractor
 from fichajes_bot.persistence.d1_client import D1Client
 from fichajes_bot.utils.helpers import now_iso, slugify
 
+# LaLiga rivals whose players should NOT be classified as RM incoming targets
+# unless the text has an explicit "to Real Madrid" signal.
+_LALIGA_RIVALS = frozenset({
+    "barcelona", "barça", "barca", "atlético de madrid", "atletico de madrid",
+    "atlético", "atletico", "sevilla", "real betis", "betis",
+    "valencia", "villarreal", "real sociedad", "athletic club", "athletic bilbao",
+    "osasuna", "celta", "girona", "getafe", "rayo vallecano",
+})
+
+# Regex that confirms the article IS about the player moving TO Real Madrid.
+# Uses word boundaries to avoid matching "al madrid" inside "real madrid".
+_RM_INCOMING_RE = re.compile(
+    r"\b(?:"
+    r"to\s+real\s+madrid"
+    r"|sign(?:s|ing)?\s+for\s+real\s+madrid"
+    r"|join(?:s|ing)?\s+real\s+madrid"
+    r"|real\s+madrid\s+(?:sign|target|eye|keen|set\s+sights|close|cierra|acuerda)"
+    r"|al\s+real\s+madrid"                    # "al Real Madrid" (not substring of "real madrid")
+    r"|hacia\s+el\s+real\s+madrid"
+    r"|ficha(?:je)?\s+(?:por|con|del?)\s+(?:el\s+)?(?:real\s+)?madrid"
+    r")\b",
+    re.IGNORECASE,
+)
+
 _HTML_TAG_RE = re.compile(r"<[^>]+>")
 _HTML_ENTITIES = {
     "&nbsp;": " ", "&amp;": "&", "&lt;": "<",
     "&gt;": ">", "&quot;": '"', "&#39;": "'",
 }
+
+
+def _is_rival_club_false_positive(text: str, gemini_result: dict) -> bool:
+    """Return True when Gemini extracted a FICHAJE but the article is primarily
+    about a LaLiga rival club, not about Real Madrid signing the player.
+
+    Pattern: article mentions rival club as the player's current/destination
+    club without any strong 'incoming to Real Madrid' signal in the text.
+    """
+    if gemini_result.get("tipo_operacion") != "FICHAJE":
+        return False
+
+    club_origen = (gemini_result.get("club_origen") or "").lower()
+    if not any(rival in club_origen for rival in _LALIGA_RIVALS):
+        return False
+
+    # club_origen is a LaLiga rival — accept only if text contains an
+    # explicit 'player → Real Madrid' phrase (word-boundary matched).
+    if _RM_INCOMING_RE.search(text):
+        return False
+
+    return True
 
 
 def _text_from_raw(raw: dict) -> str:
@@ -175,6 +221,15 @@ class ExtractionPipeline:
             logger.debug(f"[{rid}] Gemini → es_rm={gemini_result.get('es_real_madrid')} tipo={gemini_result.get('tipo_operacion')} jugador={gemini_result.get('jugador_nombre')!r}")
 
         if gemini_result and gemini_result.get("es_real_madrid"):
+            if _is_rival_club_false_positive(text, gemini_result):
+                club_o = gemini_result.get("club_origen", "?")
+                jugador = gemini_result.get("jugador_nombre", "?")
+                logger.info(
+                    f"[{rid}] SKIP rival_club_fp jugador={jugador!r} "
+                    f"club_origen={club_o!r} — no incoming-to-RM signal in text"
+                )
+                self._last_reject_reason = "rival_club_fp"
+                return None
             logger.info(f"[{rid}] ACCEPT gemini jugador={gemini_result.get('jugador_nombre')!r}")
             result = self._build_from_gemini(raw, gemini_result, lex_weight, idioma)
             await self._persist(result)
