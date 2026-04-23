@@ -56,14 +56,17 @@ _KNOWN_NAMES = [
     "Carvajal", "Militão", "Militao", "Courtois", "Lunin",
     "Ancelotti", "Endrick",
     # 2024-25 transfer targets mentioned frequently
-    "Trent", "Alexander-Arnold", "Huijsen", "Huijsen",
+    "Trent", "Alexander-Arnold", "Huijsen",
     "Mikel Merino", "Merino", "Dani Carvajal",
     "Xabi Alonso", "Alonso", "Haaland", "Salah",
     "De Bruyne", "Kane", "Lewandowski", "Benzema",
-    "Yamal", "Pedri", "Gavi", "Pedri",
+    "Yamal", "Pedri", "Gavi",
     "Gyökeres", "Gyokeres", "Isak", "Osimhen",
     "Wirtz", "Florian Wirtz", "Zubimendi",
     "Jonathan David", "Lamine",
+    # 2025-26 GN frequent targets
+    "Mac Allister", "Yildiz", "Mastantuono", "Rashford",
+    "Sandro Tonali", "Tonali", "Nico Paz", "Víctor Muñoz",
 ]
 
 # Build a regex that captures any known name
@@ -178,6 +181,36 @@ _LANG_PATTERNS: dict[str, list[tuple[str, str, int, float]]] = {
         (r"(?:Real\s+)?Madrid\s+(?:want|wants)\s+",   "FICHAJE",    2, 0.45),
         # Phase 1
         (r"(?:Real\s+)?Madrid\s+(?:are|is)\s+interested\s+in","FICHAJE",1, 0.35),
+        # ── GN-style interest/rumour headlines (conf < THRESHOLD → Gemini) ───
+        # "Real Madrid eye move for Mac Allister"
+        (r"(?:Real\s+)?Madrid\s+eye(?:ing)?(?:\s+move)?(?:\s+for)?\b","FICHAJE",2, 0.42),
+        # "Real Madrid keen on Yildiz"
+        (r"(?:Real\s+)?Madrid\s+keen\s+on\b",         "FICHAJE",    1, 0.38),
+        # "Real Madrid sets sights on Osimhen"
+        (r"(?:Real\s+)?Madrid\s+set[s]?\s+sights\s+on\b","FICHAJE", 2, 0.42),
+        # "Real Madrid plotting / chasing move"
+        (r"(?:Real\s+)?Madrid\s+(?:plot(?:ting)?|chasing|pursuing)\s+","FICHAJE",2, 0.40),
+        # "Real Madrid targeting / reportedly targeting X"
+        (r"(?:Real\s+)?Madrid\s+(?:reportedly\s+)?target(?:ing)?\s+","FICHAJE",1, 0.38),
+        # "X linked to/with Real Madrid"  /  "Real Madrid linked with X"
+        (r"\blinked?\s+(?:to|with)\s+(?:Real\s+)?Madrid\b","FICHAJE",1, 0.35),
+        (r"(?:Real\s+)?Madrid\s+linked?\s+with\b",    "FICHAJE",    1, 0.35),
+        # "X on Real Madrid's radar / shortlist"
+        (r"\bon\s+(?:Real\s+)?Madrid(?:'s)?\s+(?:radar|shortlist|wishlist)\b","FICHAJE",1, 0.35),
+        # "X is (back) on the table for Real Madrid"
+        (r"\b(?:back\s+)?on\s+(?:the\s+)?table\s+for\s+(?:Real\s+)?Madrid\b","FICHAJE",2, 0.42),
+        # ── GN-style departure hints (another club approaching RM player) ────
+        # "Liverpool offered blockbuster deal for Real Madrid star Vinicius"
+        (r"\boffer(?:ed)?\s+(?:\w+\s+){0,3}(?:deal|bid)\s+for\s+(?:Real\s+)?Madrid\b","SALIDA",2, 0.40),
+        # "Man Utd want(s) Real Madrid player/star/midfielder"
+        (r"\b(?:want(?:s)?|eye(?:ing)?)\s+(?:Real\s+)?Madrid(?:'s)?\s+(?:star|player|forward|midfielder|defender|winger|attacker)\b","SALIDA",2, 0.38),
+        # "Real Madrid player/star wanted (in the Bundesliga / by Arsenal)"
+        (r"(?:Real\s+)?Madrid\s+(?:star|player|man)\s+wanted\b","SALIDA",  2, 0.40),
+        # "Man Utd want giant Real Madrid raid" / "raid Real Madrid"
+        (r"\b(?:raid|approach(?:ing)?)\s+(?:Real\s+)?Madrid\b","SALIDA",   2, 0.38),
+        (r"(?:Real\s+)?Madrid\s+raid\b",                       "SALIDA",   2, 0.38),
+        # "Arsenal in talks with Real Madrid star / close circle"
+        (r"\btalks?\s+with\s+(?:Real\s+)?Madrid(?:'s)?\s+(?:star|player|forward|midfielder|defender|winger|close)\b","SALIDA",3, 0.55),
         # Departure
         (r"sale\s+agreed",                             "SALIDA",     6, 0.95),
         (r"will\s+not\s+renew",                        "SALIDA",     3, 0.75),

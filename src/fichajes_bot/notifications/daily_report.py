@@ -54,12 +54,18 @@ def _parse_flags(raw: Any) -> list[str]:
     return []
 
 
+def _clean_nombre(raw: Any) -> str:
+    """Strip markdown asterisks that may have been stored in nombre_canonico."""
+    return (raw or "?").strip("*").strip()
+
+
 def _player_line(r: dict[str, Any], i: int) -> str:
     pct = round((r.get("score_smoothed") or 0) * 100)
     em = "🟢" if pct >= 70 else "🟡" if pct >= 40 else "🔴"
     flags = _parse_flags(r.get("flags"))
     glob_flag = " 🎭" if "POSIBLE_GLOBO_SONDA" in flags else ""
-    return f"{i + 1}. {em} *{r['nombre_canonico']}* · {pct}%{glob_flag}"
+    nombre = _clean_nombre(r.get("nombre_canonico"))
+    return f"{i + 1}. {em} *{nombre}* · {pct}%{glob_flag}"
 
 
 # ── Main generator ─────────────────────────────────────────────────────────
@@ -175,12 +181,17 @@ async def generate_daily_report(d1: D1Client) -> str:
 
     if cambios:
         lines.append("📈 *MAYORES CAMBIOS HOY*")
+        seen_cambios: set[str] = set()
         for r in cambios:
+            nombre = _clean_nombre(r.get("nombre_canonico"))
+            if nombre.lower() in seen_cambios:
+                continue
+            seen_cambios.add(nombre.lower())
             delta = r.get("delta") or 0.0
             sign = "+" if delta >= 0 else ""
             pct_delta = f"{sign}{round(delta * 100)}%"
             razon = r.get("razon_cambio") or "?"
-            lines.append(f"• *{r['nombre_canonico']}* {pct_delta} — {razon}")
+            lines.append(f"• *{nombre}* {pct_delta} — {razon}")
     else:
         lines.append("_Sin cambios significativos hoy_")
     lines.append("")
