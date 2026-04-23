@@ -3,7 +3,22 @@
 from __future__ import annotations
 
 import json
+import re
 from typing import Any
+
+_HTML_TAG_RE = re.compile(r"<[^>]+>")
+
+
+def _strip_html(html: str) -> str:
+    """Strip HTML tags and decode common entities, return normalised plain text."""
+    text = _HTML_TAG_RE.sub(" ", html)
+    text = (text
+            .replace("&nbsp;", " ")
+            .replace("&amp;", "&")
+            .replace("&lt;", "<")
+            .replace("&gt;", ">")
+            .replace("&quot;", '"'))
+    return " ".join(text.split())
 
 import feedparser
 import httpx
@@ -96,7 +111,8 @@ class RssScraper:
         items: list[dict[str, Any]] = []
         for entry in feed.entries:
             titulo = entry.get("title", "") or ""
-            texto = entry.get("summary") or entry.get("description") or ""
+            _raw_summary = entry.get("summary") or entry.get("description") or ""
+            texto = _strip_html(_raw_summary) if _raw_summary else ""
             url_entry = entry.get("link", "") or ""
             fecha = entry.get("published", "") or entry.get("updated", "") or ""
 

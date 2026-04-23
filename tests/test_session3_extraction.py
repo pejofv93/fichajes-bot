@@ -634,6 +634,56 @@ class TestExtractionPipeline:
         assert result is None
 
     @pytest.mark.asyncio
+    async def test_html_texto_completo_stripped_for_extraction(self, db):
+        """GN-style HTML in texto_completo is stripped; useful title text survives."""
+        import uuid
+        from fichajes_bot.extraction.pipeline import ExtractionPipeline
+
+        pipeline = ExtractionPipeline(db)
+        pipeline._gemini.extract = AsyncMock(return_value=None)
+
+        # Simulates the Google News RSS description field — a real GN HTML snippet
+        gn_html = (
+            '<a href="https://news.google.com/rss/articles/CBMi...">Real Madrid: here we go! '
+            "Test Incoming Player XYZ signs 5-year contract. Done deal.</a>"
+            '&nbsp;&nbsp;<font color="#6f6f6f">Sky Sports</font>'
+        )
+        raw = {
+            "raw_id": str(uuid.uuid4()),
+            "fuente_id": "rm_transfers_gn_en",
+            "titulo": "Real Madrid: here we go! Test Incoming Player XYZ signs contract. Done deal.",
+            "texto_completo": gn_html,
+            "idioma_detectado": "en",
+            "fecha_publicacion": "2024-07-01",
+        }
+        result = await pipeline.process(raw)
+
+        assert result is not None, "GN HTML texto_completo should yield a result after stripping"
+        assert result["tipo_operacion"] == "FICHAJE"
+
+    @pytest.mark.asyncio
+    async def test_html_only_texto_completo_falls_back_to_titulo(self, db):
+        """If texto_completo is HTML-only (no extractable text after stripping), titulo is used."""
+        import uuid
+        from fichajes_bot.extraction.pipeline import ExtractionPipeline
+
+        pipeline = ExtractionPipeline(db)
+        pipeline._gemini.extract = AsyncMock(return_value=None)
+
+        raw = {
+            "raw_id": str(uuid.uuid4()),
+            "fuente_id": "rm_transfers_gn_en",
+            "titulo": "Here we go! Real Madrid sign Test Incoming Player XYZ. Contract signed.",
+            "texto_completo": '<a href="https://news.google.com/rss/articles/CBMi..."></a>',
+            "idioma_detectado": "en",
+            "fecha_publicacion": "2024-07-01",
+        }
+        result = await pipeline.process(raw)
+
+        assert result is not None, "Empty-after-strip texto_completo should fall back to titulo"
+        assert result["tipo_operacion"] == "FICHAJE"
+
+    @pytest.mark.asyncio
     async def test_result_persisted_to_rumores(self, db):
         """Successful extraction inserts a row into rumores."""
         from fichajes_bot.extraction.pipeline import ExtractionPipeline

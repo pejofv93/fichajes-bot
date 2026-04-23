@@ -17,6 +17,7 @@ Returns: dict with extraction result, or None if discarded.
 from __future__ import annotations
 
 import json
+import re
 import uuid
 from typing import Any, Optional
 
@@ -31,6 +32,30 @@ from fichajes_bot.extraction.prefilter import prefilter
 from fichajes_bot.extraction.regex_extractor import RegexExtractor
 from fichajes_bot.persistence.d1_client import D1Client
 from fichajes_bot.utils.helpers import now_iso, slugify
+
+_HTML_TAG_RE = re.compile(r"<[^>]+>")
+_HTML_ENTITIES = {
+    "&nbsp;": " ", "&amp;": "&", "&lt;": "<",
+    "&gt;": ">", "&quot;": '"', "&#39;": "'",
+}
+
+
+def _text_from_raw(raw: dict) -> str:
+    """Return clean extraction text: strip HTML from texto_completo, fallback to titulo.
+
+    Google News RSS stores the item title as an HTML snippet in the description
+    field (texto_completo), e.g.:
+        <a href="...">Player X signs for Real Madrid</a>&nbsp;<font>ESPN</font>
+    The HTML is truthy so the naïve `texto_completo or titulo` keeps the markup.
+    This helper strips tags/entities first; if the result is empty it uses titulo.
+    """
+    texto = raw.get("texto_completo") or ""
+    if texto:
+        texto = _HTML_TAG_RE.sub(" ", texto)
+        for ent, char in _HTML_ENTITIES.items():
+            texto = texto.replace(ent, char)
+        texto = " ".join(texto.split())
+    return (texto or raw.get("titulo") or "").strip()
 
 
 class ExtractionPipeline:
@@ -73,7 +98,7 @@ class ExtractionPipeline:
         rid = (raw.get("raw_id") or "?")[:8]
         fuente = raw.get("fuente_id", "?")
 
-        text = (raw.get("texto_completo") or raw.get("titulo") or "").strip()
+        text = _text_from_raw(raw)
         if not text:
             logger.debug(f"[{rid}] SKIP empty_text fuente={fuente}")
             self._last_reject_reason = "empty_text"
