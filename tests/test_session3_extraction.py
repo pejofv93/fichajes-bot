@@ -501,6 +501,65 @@ class TestGeminiClient:
         assert r is None
 
     @pytest.mark.asyncio
+    async def test_call_api_uses_env_key_not_instance_var(self, db):
+        """_call_api must use self._key (env-aware property), not self._api_key.
+
+        Regression test: previously _call_api used self._api_key (always "")
+        so Gemini was silently called with an empty key and always failed,
+        producing 0 real API calls even when GEMINI_API_KEY was set.
+        """
+        import sys
+        import types
+        from unittest.mock import MagicMock
+        from fichajes_bot.extraction.gemini_client import GeminiClient
+
+        captured_key: list[str] = []
+
+        # Build a minimal fake google.generativeai module so _call_api
+        # can import it even when the real package isn't installed.
+        fake_genai = types.ModuleType("google.generativeai")
+
+        def mock_configure(api_key: str) -> None:
+            captured_key.append(api_key)
+
+        mock_model = MagicMock()
+        mock_resp = MagicMock()
+        mock_resp.text = (
+            '{"es_real_madrid":true,"tipo_operacion":"FICHAJE",'
+            '"jugador_nombre":"Mac Allister","confianza":0.8,'
+            '"fase_rumor":2,"lexico_detectado":"eye",'
+            '"club_destino":null,"club_origen":null}'
+        )
+        mock_model.generate_content.return_value = mock_resp
+        fake_genai.configure = mock_configure
+        fake_genai.GenerativeModel = MagicMock(return_value=mock_model)
+        fake_genai.GenerationConfig = MagicMock(return_value={})
+
+        # Inject the fake module so the `import google.generativeai` inside
+        # _call_api resolves to our mock instead of the real package.
+        prev = sys.modules.get("google.generativeai")
+        sys.modules["google.generativeai"] = fake_genai
+        try:
+            with patch.dict("os.environ", {"GEMINI_API_KEY": "real-env-key-xyz"}):
+                with patch("asyncio.sleep", new_callable=AsyncMock):
+                    client = GeminiClient(db)
+                    assert client._api_key == "", "precondition: _api_key starts empty"
+                    await client._call_api(
+                        "Real Madrid eye move for Mac Allister", "en"
+                    )
+        finally:
+            if prev is None:
+                sys.modules.pop("google.generativeai", None)
+            else:
+                sys.modules["google.generativeai"] = prev
+
+        assert len(captured_key) == 1, "genai.configure should have been called once"
+        assert captured_key[0] == "real-env-key-xyz", (
+            f"Expected env key 'real-env-key-xyz', got {captured_key[0]!r} — "
+            "bug: use self._key not self._api_key in _call_api"
+        )
+
+    @pytest.mark.asyncio
     async def test_non_rm_response_returns_none(self, db):
         """If Gemini says es_real_madrid=false, extract returns None."""
         from fichajes_bot.extraction.gemini_client import GeminiClient

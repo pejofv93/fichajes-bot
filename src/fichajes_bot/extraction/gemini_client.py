@@ -179,7 +179,7 @@ class GeminiClient:
             return None
 
         try:
-            genai.configure(api_key=self._api_key)
+            genai.configure(api_key=self._key)
             model = genai.GenerativeModel(
                 "gemini-1.5-flash",
                 generation_config=genai.GenerationConfig(
