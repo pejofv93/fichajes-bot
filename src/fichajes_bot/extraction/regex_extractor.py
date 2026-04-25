@@ -67,6 +67,7 @@ _KNOWN_NAMES = [
     # 2025-26 GN frequent targets
     "Mac Allister", "Yildiz", "Mastantuono", "Rashford",
     "Sandro Tonali", "Tonali", "Nico Paz", "Víctor Muñoz",
+    "Rodri", "Konaté", "Konate", "Leao", "Leão",
 ]
 
 # Build a regex that captures any known name
@@ -214,8 +215,12 @@ _LANG_PATTERNS: dict[str, list[tuple[str, str, int, float]]] = {
         (r"(?:Real\s+)?Madrid\s+raid\b",                       "SALIDA",   2, 0.38),
         # "Arsenal in talks with Real Madrid star / close circle"
         (r"\btalks?\s+with\s+(?:Real\s+)?Madrid(?:'s)?\s+(?:star|player|forward|midfielder|defender|winger|close)\b","SALIDA",3, 0.55),
-        # "Ramírez in talks over Real Madrid transfer/move/deal"
+        # "Ramírez in talks over Real Madrid transfer" (in talks → Madrid)
         (r"\bin\s+talks?\b[^.!?\n]{0,40}(?:Real\s+)?Madrid\b",  "FICHAJE",  2, 0.45),
+        # "Real Madrid in talks with Man City" (Madrid → in talks)
+        (r"(?:Real\s+)?Madrid\b[^.!?\n]{0,35}\bin\s+talks?\b",  "FICHAJE",  3, 0.55),
+        # "Haaland over Real Madrid transfer/move/deal"
+        (r"\bover\s+(?:Real\s+)?Madrid\s+(?:transfer|move|deal)\b","FICHAJE",1, 0.35),
         # "Michael Olise from Real Madrid" — departure confirmation
         (r"\bfrom\s+(?:Real\s+)?Madrid\b",             "SALIDA",     2, 0.38),
         # Departure
