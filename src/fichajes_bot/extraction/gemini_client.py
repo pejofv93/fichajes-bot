@@ -133,9 +133,11 @@ class GeminiClient:
 
         Raises GeminiBudgetExceeded when daily limit is hit.
         """
-        if not self._key:
-            logger.debug("GEMINI_API_KEY not set — skipping LLM extraction")
+        key = self._key
+        if not key:
+            logger.warning("GEMINI_API_KEY not set — skipping LLM extraction")
             return None
+        logger.debug(f"Gemini key present len={len(key)} prefix={key[:4]!r}")
 
         # Canonical cache key: hash of first 2000 chars + language
         input_hash = sha256_hash(text[:2000], idioma)
@@ -203,7 +205,7 @@ class GeminiClient:
             logger.warning(f"Gemini returned invalid JSON: {exc}")
             return None
         except Exception as exc:
-            logger.warning(f"Gemini API error: {exc}")
+            logger.warning(f"Gemini API error ({type(exc).__name__}): {exc}")
             return None
 
 

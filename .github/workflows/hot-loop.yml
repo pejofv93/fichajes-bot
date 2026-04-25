@@ -48,7 +48,11 @@ jobs:
         continue-on-error: true
 
       - name: Process pending rumors (regex + Gemini)
-        run: python -m fichajes_bot.jobs.process --limit 100
+        run: |
+          echo "GEMINI key present: $([ -n "$GEMINI_API_KEY" ] && echo YES || echo NO)"
+          echo "GEMINI key length: ${#GEMINI_API_KEY}"
+          echo "GEMINI key first4: ${GEMINI_API_KEY:0:4}"
+          python -m fichajes_bot.jobs.process --limit 100
         continue-on-error: false
 
       - name: Recompute scores (Kalman)

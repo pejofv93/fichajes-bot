@@ -178,20 +178,23 @@ _LANG_PATTERNS: dict[str, list[tuple[str, str, int, float]]] = {
         # Phase 2
         (r"(?:Real\s+)?Madrid\s+(?:have|has)\s+made\s+contact","FICHAJE",2, 0.50),
         (r"(?:Real\s+)?Madrid\s+(?:are|is)\s+(?:tracking|monitoring)","FICHAJE",2, 0.42),
-        (r"(?:Real\s+)?Madrid\s+(?:want|wants)\s+",   "FICHAJE",    2, 0.45),
+        # [^.!?\n]{0,35} allows multi-club headlines: "Real Madrid, Barcelona want X"
+        (r"(?:Real\s+)?Madrid[^.!?\n]{0,35}\b(?:want|wants)\s+","FICHAJE",2, 0.45),
         # Phase 1
         (r"(?:Real\s+)?Madrid\s+(?:are|is)\s+interested\s+in","FICHAJE",1, 0.35),
         # ── GN-style interest/rumour headlines (conf < THRESHOLD → Gemini) ───
-        # "Real Madrid eye move for Mac Allister"
-        (r"(?:Real\s+)?Madrid\s+eye(?:ing)?(?:\s+move)?(?:\s+for)?\b","FICHAJE",2, 0.42),
+        # "Real Madrid eye move for X" / "Real Madrid, Club2 eye X"
+        (r"(?:Real\s+)?Madrid[^.!?\n]{0,35}\beye(?:ing)?(?:\s+move)?(?:\s+for)?\b","FICHAJE",2, 0.42),
         # "Real Madrid keen on Yildiz"
-        (r"(?:Real\s+)?Madrid\s+keen\s+on\b",         "FICHAJE",    1, 0.38),
+        (r"(?:Real\s+)?Madrid[^.!?\n]{0,35}\bkeen\s+on\b","FICHAJE",1, 0.38),
         # "Real Madrid sets sights on Osimhen"
-        (r"(?:Real\s+)?Madrid\s+set[s]?\s+sights\s+on\b","FICHAJE", 2, 0.42),
-        # "Real Madrid plotting / chasing move"
-        (r"(?:Real\s+)?Madrid\s+(?:plot(?:ting)?|chasing|pursuing)\s+","FICHAJE",2, 0.40),
+        (r"(?:Real\s+)?Madrid[^.!?\n]{0,35}\bset[s]?\s+sights\s+on\b","FICHAJE",2, 0.42),
+        # "Real Madrid plotting / chasing move" / "Real Madrid, Club2 plotting X"
+        (r"(?:Real\s+)?Madrid[^.!?\n]{0,35}\b(?:plot(?:ting)?|chasing|pursuing)\s+","FICHAJE",2, 0.40),
         # "Real Madrid targeting / reportedly targeting X"
-        (r"(?:Real\s+)?Madrid\s+(?:reportedly\s+)?target(?:ing)?\s+","FICHAJE",1, 0.38),
+        (r"(?:Real\s+)?Madrid[^.!?\n]{0,35}\b(?:reportedly\s+)?target(?:ing)?\s+","FICHAJE",1, 0.38),
+        # "Real Madrid identify their top choice" — interest signal
+        (r"(?:Real\s+)?Madrid[^.!?\n]{0,35}\bidentif(?:y|ying|ied)\b","FICHAJE",1, 0.35),
         # "X linked to/with Real Madrid"  /  "Real Madrid linked with X"
         (r"\blinked?\s+(?:to|with)\s+(?:Real\s+)?Madrid\b","FICHAJE",1, 0.35),
         (r"(?:Real\s+)?Madrid\s+linked?\s+with\b",    "FICHAJE",    1, 0.35),
@@ -211,6 +214,10 @@ _LANG_PATTERNS: dict[str, list[tuple[str, str, int, float]]] = {
         (r"(?:Real\s+)?Madrid\s+raid\b",                       "SALIDA",   2, 0.38),
         # "Arsenal in talks with Real Madrid star / close circle"
         (r"\btalks?\s+with\s+(?:Real\s+)?Madrid(?:'s)?\s+(?:star|player|forward|midfielder|defender|winger|close)\b","SALIDA",3, 0.55),
+        # "Ramírez in talks over Real Madrid transfer/move/deal"
+        (r"\bin\s+talks?\b[^.!?\n]{0,40}(?:Real\s+)?Madrid\b",  "FICHAJE",  2, 0.45),
+        # "Michael Olise from Real Madrid" — departure confirmation
+        (r"\bfrom\s+(?:Real\s+)?Madrid\b",             "SALIDA",     2, 0.38),
         # Departure
         (r"sale\s+agreed",                             "SALIDA",     6, 0.95),
         (r"will\s+not\s+renew",                        "SALIDA",     3, 0.75),
