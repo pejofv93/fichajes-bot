@@ -126,7 +126,7 @@ class GeminiClient:
             "INSERT OR REPLACE INTO llm_cache "
             "(cache_id, input_hash, modelo, response_json, created_at, expires_at) "
             "VALUES (?,?,?,?,datetime('now'),?)",
-            [cache_id, input_hash, "gemini-1.5-flash", json.dumps(response), expires],
+            [cache_id, input_hash, "gemini-2.0-flash", json.dumps(response), expires],
         )
 
     # ── Main extract ─────────────────────────────────────────────────────────
@@ -190,7 +190,7 @@ class GeminiClient:
         try:
             genai.configure(api_key=self._key)
             model = genai.GenerativeModel(
-                "gemini-1.5-flash",
+                "gemini-2.0-flash",
                 generation_config=genai.GenerationConfig(
                     response_mime_type="application/json",
                     temperature=0.1,
