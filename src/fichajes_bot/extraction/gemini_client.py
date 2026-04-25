@@ -22,7 +22,7 @@ from fichajes_bot.persistence.d1_client import D1Client
 from fichajes_bot.utils.helpers import sha256_hash
 
 GEMINI_DAILY_LIMIT = 1400   # leave 100 req margin over the 1500 free cap
-GEMINI_RPM_SLEEP = 4.0      # seconds between real API calls (~15 RPM)
+GEMINI_RPM_SLEEP = 6.0      # seconds between real API calls (~10 RPM, avoids 429)
 CACHE_TTL_DAYS = 7
 
 _PROMPT_TEMPLATE = """\
@@ -126,7 +126,7 @@ class GeminiClient:
             "INSERT OR REPLACE INTO llm_cache "
             "(cache_id, input_hash, modelo, response_json, created_at, expires_at) "
             "VALUES (?,?,?,?,datetime('now'),?)",
-            [cache_id, input_hash, "gemini-2.0-flash", json.dumps(response), expires],
+            [cache_id, input_hash, "gemini-1.5-flash-latest", json.dumps(response), expires],
         )
 
     # ── Main extract ─────────────────────────────────────────────────────────
@@ -190,7 +190,7 @@ class GeminiClient:
         try:
             genai.configure(api_key=self._key)
             model = genai.GenerativeModel(
-                "gemini-2.0-flash",
+                "gemini-1.5-flash-latest",
                 generation_config=genai.GenerationConfig(
                     response_mime_type="application/json",
                     temperature=0.1,
