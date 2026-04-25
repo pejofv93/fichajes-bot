@@ -329,9 +329,12 @@ _CLUB_RE = re.compile(
 
 # Names that must never be identified as players (media, brands, phrases)
 _NAME_BLACKLIST: frozenset[str] = frozenset({
-    # Phrases
-    "Real Madrid", "Transfer News", "Breaking News", "Here We Go",
-    "Done Deal", "Transfer Talk", "Transfer Window", "Premier League",
+    # Phrases / generic descriptors that are not player names
+    "Real Madrid", "Real Madrid Target", "Real Madrid Star", "Real Madrid Player",
+    "Los Blancos Target", "Los Blancos Star",
+    "Transfer News", "Breaking News", "Here We Go",
+    "Done Deal", "Transfer Talk", "Transfer Window",
+    "Premier League", "Premier League Star", "Premier League Target",
     "Champions League", "Europa League", "La Liga", "Serie",
     # Journalists / analysts
     "Fabrizio Romano", "David Ornstein", "Matteo Moretto", "Gianluca Di",

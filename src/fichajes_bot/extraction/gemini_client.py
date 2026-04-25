@@ -47,6 +47,9 @@ Respond ONLY with a single JSON object — no markdown, no explanation:
 
 Rules:
 - es_real_madrid must be true for the result to be useful.
+- jugador_nombre: extract ONLY a full proper name (first name + surname of a real person).
+  If the article uses generic phrases like "Real Madrid target", "the player", "the star",
+  "a forward", "Los Blancos target" instead of naming the player, return null.
 - fase_rumor: 1=interest, 2=contacts, 3=negotiations, 4=personal agreement, 5=club agreement/medical, 6=confirmed.
 - If unrelated to Real Madrid transfers: {{"es_real_madrid": false, "confianza": 0.0}}.
 """
