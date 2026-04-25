@@ -161,8 +161,12 @@ class GeminiClient:
         # Rate-limit sleep (15 RPM = 1 call per 4s)
         await asyncio.sleep(GEMINI_RPM_SLEEP)
 
+        logger.info(f"Gemini INPUT | {text[:120]!r}")
+
         # Real API call
         result = await self._call_api(text, idioma)
+
+        logger.info(f"Gemini OUTPUT | {json.dumps(result, ensure_ascii=False)}")
 
         if result is None:
             return None
