@@ -37,8 +37,8 @@ _RM_RE = re.compile(
 # ── Stage 2: Transfer signal words (multi-language) ───────────────────────────
 # Deliberately broad — exact classification happens downstream.
 _TRANSFER_PATTERNS = [
-    # Spanish
-    r"\bfich[ae]\b", r"\bfichari\w*\b", r"\bfichaje\b",
+    # Spanish — fich* catches fichar/fichará/fichado/fichaje/ficharon/ficharía
+    r"\bfich\w+\b",
     r"\btraspaso\b", r"\btransfer\b",
     r"\bacuerdo\b", r"\bcontrato\b", r"\brenovaci[oó]n\b",
     r"\bsalida\b", r"\bcesi[oó]n\b", r"\bcedido\b",
