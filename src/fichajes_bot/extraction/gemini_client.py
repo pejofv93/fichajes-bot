@@ -25,6 +25,15 @@ GEMINI_DAILY_LIMIT = 1400   # leave 100 req margin over the 1500 free cap
 GEMINI_RPM_SLEEP = 6.0      # seconds between real API calls (~10 RPM, avoids 429)
 CACHE_TTL_DAYS = 7
 
+_SIMPLE_PROMPT_TEMPLATE = """\
+Football transfer news headline: '{titulo}'
+Extract as JSON:
+- player_name: full name of a real football player (null if not mentioned or if generic like 'target', 'star')
+- operation_type: 'FICHAJE' if player joining Real Madrid, 'SALIDA' if player leaving Real Madrid, null if unclear
+- confidence: float 0-1
+- is_real_madrid: true/false
+Return only valid JSON, no other text."""
+
 _PROMPT_TEMPLATE = """\
 You are a football transfer news analyst. Extract Real Madrid transfer information from the text below.
 
@@ -213,6 +222,83 @@ class GeminiClient:
             return None
         except Exception as exc:
             logger.warning(f"Gemini API error ({type(exc).__name__}): {exc}")
+            return None
+
+
+    async def extract_simple(self, titulo: str) -> Optional[dict[str, Any]]:
+        """Call Gemini with simple title-only prompt. Returns dict or None.
+
+        Raises GeminiBudgetExceeded when daily limit is hit.
+        Uses fields: player_name, operation_type, confidence, is_real_madrid.
+        """
+        key = self._key
+        if not key:
+            logger.warning("GEMINI_API_KEY not set — skipping LLM extraction")
+            return None
+
+        input_hash = sha256_hash(titulo[:500], "simple-v2")
+
+        cached = await self._cache_get(input_hash)
+        if cached is not None:
+            logger.debug(f"Gemini cache HIT | hash={input_hash[:12]}")
+            return cached if cached.get("is_real_madrid") else None
+
+        usage = await self.get_daily_usage()
+        if usage >= GEMINI_DAILY_LIMIT:
+            raise GeminiBudgetExceeded(
+                f"Daily Gemini budget exhausted: {usage}/{GEMINI_DAILY_LIMIT}"
+            )
+
+        await asyncio.sleep(GEMINI_RPM_SLEEP)
+
+        logger.info(f"Gemini INPUT | {titulo!r}")
+
+        result = await self._call_simple_api(titulo)
+
+        logger.info(f"Gemini OUTPUT | {json.dumps(result, ensure_ascii=False)}")
+
+        if result is None:
+            return None
+
+        await self._cache_set(input_hash, result)
+        await self._increment_usage()
+
+        if not result.get("is_real_madrid"):
+            return None
+
+        return result
+
+    async def _call_simple_api(self, titulo: str) -> Optional[dict]:
+        try:
+            import google.generativeai as genai  # type: ignore[import]
+        except ImportError:
+            logger.warning("google-generativeai not installed")
+            return None
+
+        try:
+            genai.configure(api_key=self._key)
+            model = genai.GenerativeModel(
+                "gemini-1.5-flash-latest",
+                generation_config=genai.GenerationConfig(
+                    response_mime_type="application/json",
+                    temperature=0.1,
+                    max_output_tokens=200,
+                ),
+            )
+            prompt = _SIMPLE_PROMPT_TEMPLATE.format(
+                titulo=titulo.replace("'", "\\'")
+            )
+            response = await asyncio.get_event_loop().run_in_executor(
+                None,
+                lambda: model.generate_content(prompt),
+            )
+            return json.loads(response.text)
+
+        except json.JSONDecodeError as exc:
+            logger.warning(f"Gemini simple returned invalid JSON: {exc}")
+            return None
+        except Exception as exc:
+            logger.warning(f"Gemini simple API error ({type(exc).__name__}): {exc}")
             return None
 
 

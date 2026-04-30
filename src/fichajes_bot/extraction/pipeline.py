@@ -1,17 +1,9 @@
-"""Extraction pipeline: prefilter → language → lexicon+regex → Gemini fallback.
+"""Extraction pipeline: prefilter → Gemini direct.
 
-Pipeline steps:
-  1. Prefilter — fast RM + transfer keyword check (no DB)
-  2. Language detection — langdetect + heuristics
-  3. Lexicon match — Aho-Corasick from DB entries (cached per instance)
-  4. Regex extract — multi-language patterns
-  5. Confidence compute — combine regex + lexicon
-  6. If confidence >= THRESHOLD (0.60): accept without LLM
-  7. Else: Gemini Flash extraction
-  8. Fallback: if GeminiBudgetExceeded or Gemini disabled → accept regex result if any
-  9. Persist: insert/update rumores + jugadores tables
-
-Returns: dict with extraction result, or None if discarded.
+Steps:
+  1. Prefilter — check text for Real Madrid identifiers (no DB)
+  2. Gemini — send title with simple prompt, get player + operation
+  3. If player_name != null AND confidence >= 0.5 AND is_real_madrid → persist
 """
 
 from __future__ import annotations
@@ -23,371 +15,97 @@ from typing import Any, Optional
 
 from loguru import logger
 
-from fichajes_bot.calibration.reliability_manager import ReliabilityManager
-from fichajes_bot.extraction.confidence import THRESHOLD, compute_confidence, needs_llm
 from fichajes_bot.extraction.gemini_client import GeminiBudgetExceeded, GeminiClient
-from fichajes_bot.extraction.language_detect import detect as detect_language
-from fichajes_bot.extraction.lexicon_matcher import LexiconMatcher
-from fichajes_bot.extraction.prefilter import prefilter
-from fichajes_bot.extraction.regex_extractor import RegexExtractor
 from fichajes_bot.persistence.d1_client import D1Client
-from fichajes_bot.utils.helpers import now_iso, slugify
+from fichajes_bot.utils.helpers import slugify
 
-# LaLiga rivals whose players should NOT be classified as RM incoming targets
-# unless the text has an explicit "to Real Madrid" signal.
-_LALIGA_RIVALS = frozenset({
-    "barcelona", "barça", "barca", "atlético de madrid", "atletico de madrid",
-    "atlético", "atletico", "sevilla", "real betis", "betis",
-    "valencia", "villarreal", "real sociedad", "athletic club", "athletic bilbao",
-    "osasuna", "celta", "girona", "getafe", "rayo vallecano",
-})
-
-# Regex that confirms the article IS about the player moving TO Real Madrid.
-# Uses word boundaries to avoid matching "al madrid" inside "real madrid".
-_RM_INCOMING_RE = re.compile(
-    r"\b(?:"
-    r"to\s+real\s+madrid"
-    r"|sign(?:s|ing)?\s+for\s+real\s+madrid"
-    r"|join(?:s|ing)?\s+real\s+madrid"
-    r"|real\s+madrid\s+(?:sign|target|eye|keen|set\s+sights|close|cierra|acuerda)"
-    r"|al\s+real\s+madrid"                    # "al Real Madrid" (not substring of "real madrid")
-    r"|hacia\s+el\s+real\s+madrid"
-    r"|ficha(?:je)?\s+(?:por|con|del?)\s+(?:el\s+)?(?:real\s+)?madrid"
-    r")\b",
+_RM_RE = re.compile(
+    r"real\s+madrid|los\s+blancos|\brm\b",
     re.IGNORECASE,
 )
 
-_HTML_TAG_RE = re.compile(r"<[^>]+>")
-_HTML_ENTITIES = {
-    "&nbsp;": " ", "&amp;": "&", "&lt;": "<",
-    "&gt;": ">", "&quot;": '"', "&#39;": "'",
-}
-
-
-def _is_rival_club_false_positive(text: str, gemini_result: dict) -> bool:
-    """Return True when Gemini extracted a FICHAJE but the article is primarily
-    about a LaLiga rival club, not about Real Madrid signing the player.
-
-    Pattern: article mentions rival club as the player's current/destination
-    club without any strong 'incoming to Real Madrid' signal in the text.
-    """
-    if gemini_result.get("tipo_operacion") != "FICHAJE":
-        return False
-
-    club_origen = (gemini_result.get("club_origen") or "").lower()
-    if not any(rival in club_origen for rival in _LALIGA_RIVALS):
-        return False
-
-    # club_origen is a LaLiga rival — accept only if text contains an
-    # explicit 'player → Real Madrid' phrase (word-boundary matched).
-    if _RM_INCOMING_RE.search(text):
-        return False
-
-    return True
-
-
-def _text_from_raw(raw: dict) -> str:
-    """Return clean extraction text: strip HTML from texto_completo, fallback to titulo.
-
-    Google News RSS stores the item title as an HTML snippet in the description
-    field (texto_completo), e.g.:
-        <a href="...">Player X signs for Real Madrid</a>&nbsp;<font>ESPN</font>
-    The HTML is truthy so the naïve `texto_completo or titulo` keeps the markup.
-    This helper strips tags/entities first; if the result is empty it uses titulo.
-    """
-    texto = raw.get("texto_completo") or ""
-    if texto:
-        texto = _HTML_TAG_RE.sub(" ", texto)
-        for ent, char in _HTML_ENTITIES.items():
-            texto = texto.replace(ent, char)
-        texto = " ".join(texto.split())
-    return (texto or raw.get("titulo") or "").strip()
-
 
 class ExtractionPipeline:
-    """One instance per job run. Lexicon is loaded once per instance."""
+    """One instance per job run."""
 
     def __init__(self, db: D1Client) -> None:
         self.db = db
-        self._lexicon: Optional[LexiconMatcher] = None
-        self._regex = RegexExtractor()
         self._gemini = GeminiClient(db)
-        self._reliability: Optional[ReliabilityManager] = None
-        self._retraction_handler = None
-        self._hard_signal_detector = None
         self._last_reject_reason: str = ""
-
-    async def get_reliability_manager(self) -> ReliabilityManager:
-        """Lazy-initialised ReliabilityManager for use by downstream sessions."""
-        if self._reliability is None:
-            self._reliability = ReliabilityManager(self.db)
-        return self._reliability
-
-    # ── Lexicon (lazy, cached) ────────────────────────────────────────────────
-
-    async def _get_lexicon(self) -> LexiconMatcher:
-        if self._lexicon is not None:
-            return self._lexicon
-        entries = await self.db.execute(
-            "SELECT frase, idioma, categoria, fase_rumor, tipo_operacion, "
-            "peso_base, peso_aprendido FROM lexicon_entries"
-        )
-        m = LexiconMatcher()
-        m.load_from_list(entries)
-        self._lexicon = m
-        return m
-
-    # ── Main process ──────────────────────────────────────────────────────────
 
     async def process(self, raw: dict[str, Any]) -> Optional[dict[str, Any]]:
         """Process one raw rumor. Returns extraction dict or None."""
         rid = (raw.get("raw_id") or "?")[:8]
-        fuente = raw.get("fuente_id", "?")
 
-        text = _text_from_raw(raw)
-        if not text:
-            logger.debug(f"[{rid}] SKIP empty_text fuente={fuente}")
-            self._last_reject_reason = "empty_text"
-            return None
+        titulo = raw.get("titulo") or ""
+        texto = raw.get("texto_completo") or ""
+        text = f"{titulo} {texto}".strip()
 
-        # ── Step 1: Prefilter ────────────────────────────────────────────────
-        if not prefilter(text):
-            logger.debug(f"[{rid}] SKIP prefilter fuente={fuente} title={raw.get('titulo','')[:60]!r}")
+        # Step 1: Prefilter
+        if not _RM_RE.search(text):
+            logger.debug(f"[{rid}] SKIP prefilter title={titulo[:60]!r}")
             self._last_reject_reason = "prefilter"
             return None
 
-        logger.debug(f"[{rid}] PASS prefilter fuente={fuente}")
-
-        # ── Step 2: Language ─────────────────────────────────────────────────
-        idioma = raw.get("idioma_detectado") or detect_language(text)
-
-        # ── Step 3: Lexicon ──────────────────────────────────────────────────
-        lexicon = await self._get_lexicon()
-        lex_matches = lexicon.match(text, idioma)
-        lex_weight = lexicon.compute_weight(lex_matches)
-        lex_tipo = lexicon.best_tipo(lex_matches)
-        lex_fase = lexicon.best_fase(lex_matches)
-
-        # ── Step 4: Regex ────────────────────────────────────────────────────
-        regex_result = self._regex.extract(text, idioma)
-
-        # ── Step 5: Confidence ───────────────────────────────────────────────
-        conf = compute_confidence(
-            regex_confianza=regex_result.confianza if regex_result else None,
-            lexicon_weight=lex_weight,
-            n_lexicon_matches=len(lex_matches),
-            negation_found=regex_result.negation_found if regex_result else False,
-        )
-
-        # Determine tipo from best available signal
-        tipo = (
-            (regex_result.tipo_operacion if regex_result else None)
-            or lex_tipo
-        )
-
-        logger.debug(
-            f"[{rid}] conf={conf:.2f} tipo={tipo} "
-            f"lex_matches={len(lex_matches)} regex={'OK' if regex_result else 'None'} "
-            f"jugador={getattr(regex_result, 'jugador_nombre', None)!r}"
-        )
-
-        if not tipo and conf < 0.3:
-            logger.debug(f"[{rid}] SKIP no_signal conf={conf:.2f} tipo=None")
-            self._last_reject_reason = "no_signal"
-            return None
-
-        # ── Step 6: Accept regex without LLM ─────────────────────────────────
-        if conf >= THRESHOLD and tipo:
-            logger.info(f"[{rid}] ACCEPT regex conf={conf:.2f} tipo={tipo} jugador={getattr(regex_result, 'jugador_nombre', None)!r}")
-            result = self._build_result(
-                raw, regex_result, lex_matches, lex_weight, lex_fase,
-                tipo, idioma, conf, "regex",
-            )
-            await self._persist(result)
-            await self._post_process(result)
-            return result
-
-        # ── Step 7: Gemini fallback ───────────────────────────────────────────
-        logger.debug(f"[{rid}] calling Gemini conf={conf:.2f} tipo={tipo}")
+        # Step 2: Gemini direct on title
         gemini_result: Optional[dict] = None
         try:
-            gemini_result = await self._gemini.extract(text, idioma)
+            gemini_result = await self._gemini.extract_simple(titulo)
         except GeminiBudgetExceeded as exc:
             logger.warning(f"Gemini budget exceeded: {exc}")
+            self._last_reject_reason = "budget_exceeded"
+            return None
         except Exception as exc:
-            logger.warning(f"Gemini unexpected error: {exc}")
+            logger.warning(f"Gemini error: {exc}")
+            self._last_reject_reason = "gemini_error"
+            return None
 
-        if gemini_result:
-            logger.debug(f"[{rid}] Gemini → es_rm={gemini_result.get('es_real_madrid')} tipo={gemini_result.get('tipo_operacion')} jugador={gemini_result.get('jugador_nombre')!r}")
+        if not gemini_result:
+            logger.debug(f"[{rid}] SKIP no_gemini_result")
+            self._last_reject_reason = "no_gemini_result"
+            return None
 
-        if gemini_result and gemini_result.get("es_real_madrid"):
-            if _is_rival_club_false_positive(text, gemini_result):
-                club_o = gemini_result.get("club_origen", "?")
-                jugador = gemini_result.get("jugador_nombre", "?")
-                logger.info(
-                    f"[{rid}] SKIP rival_club_fp jugador={jugador!r} "
-                    f"club_origen={club_o!r} — no incoming-to-RM signal in text"
-                )
-                self._last_reject_reason = "rival_club_fp"
-                return None
-            logger.info(f"[{rid}] ACCEPT gemini jugador={gemini_result.get('jugador_nombre')!r}")
-            result = self._build_from_gemini(raw, gemini_result, lex_weight, idioma)
-            await self._persist(result)
-            await self._post_process(result)
-            return result
+        player_name = gemini_result.get("player_name")
+        confidence = float(gemini_result.get("confidence") or 0)
+        is_real_madrid = bool(gemini_result.get("is_real_madrid"))
+        operation_type = gemini_result.get("operation_type")
 
-        # ── Step 8: Fallback — accept weak regex if tipo is known ─────────────
-        if tipo and (regex_result or lex_tipo):
-            logger.info(f"[{rid}] ACCEPT fallback conf={conf:.2f} tipo={tipo} jugador={getattr(regex_result, 'jugador_nombre', None)!r}")
-            result = self._build_result(
-                raw, regex_result, lex_matches, lex_weight, lex_fase,
-                tipo, idioma, conf, "regex",
+        # Step 3: Accept or discard
+        if not player_name or confidence < 0.5 or not is_real_madrid:
+            logger.debug(
+                f"[{rid}] SKIP player={player_name!r} conf={confidence:.2f} is_rm={is_real_madrid}"
             )
-            await self._persist(result)
-            await self._post_process(result)
-            return result
+            self._last_reject_reason = "no_player" if not player_name else "low_confidence"
+            return None
 
-        logger.debug(f"[{rid}] SKIP no_extraction conf={conf:.2f} tipo={tipo} gemini={'no_rm' if gemini_result else 'None'}")
-        self._last_reject_reason = "no_extraction"
-        return None
-
-    # ── Result builders ───────────────────────────────────────────────────────
-
-    def _build_result(
-        self,
-        raw: dict,
-        regex_result: Any,
-        lex_matches: list[dict],
-        lex_weight: float,
-        lex_fase: Optional[int],
-        tipo: str,
-        idioma: str,
-        confianza: float,
-        extraido_con: str,
-    ) -> dict[str, Any]:
-        fase = (
-            (regex_result.fase_rumor if regex_result else None)
-            or lex_fase
-            or 1
-        )
-        lexico = (
-            (regex_result.lexico_detectado if regex_result else None)
-            or (lex_matches[0]["frase"] if lex_matches else None)
-        )
-        jugador_nombre = regex_result.jugador_nombre if regex_result else None
-        club_destino = regex_result.club_destino if regex_result else None
-
-        return {
+        result = {
             "rumor_id": str(uuid.uuid4()),
             "raw_id": raw.get("raw_id"),
             "fuente_id": raw.get("fuente_id"),
-            "tipo_operacion": tipo,
-            "fase_rumor": fase,
-            "lexico_detectado": lexico,
-            "peso_lexico": round(lex_weight or confianza, 4),
-            "confianza_extraccion": round(confianza, 4),
-            "extraido_con": extraido_con,
-            "idioma": idioma,
-            "texto_fragmento": (raw.get("titulo") or "")[:300],
-            "jugador_nombre": jugador_nombre,
-            "club_destino": club_destino,
-            "fecha_publicacion": raw.get("fecha_publicacion"),
-        }
-
-    def _build_from_gemini(
-        self,
-        raw: dict,
-        gr: dict,
-        lex_weight: float,
-        idioma: str,
-    ) -> dict[str, Any]:
-        return {
-            "rumor_id": str(uuid.uuid4()),
-            "raw_id": raw.get("raw_id"),
-            "fuente_id": raw.get("fuente_id"),
-            "tipo_operacion": gr.get("tipo_operacion"),
-            "fase_rumor": gr.get("fase_rumor") or 1,
-            "lexico_detectado": gr.get("lexico_detectado"),
-            "peso_lexico": round(max(float(gr.get("confianza") or 0), lex_weight), 4),
-            "confianza_extraccion": round(float(gr.get("confianza") or 0.5), 4),
+            "tipo_operacion": operation_type,
+            "fase_rumor": 1,
+            "lexico_detectado": None,
+            "peso_lexico": round(confidence, 4),
+            "confianza_extraccion": round(confidence, 4),
             "extraido_con": "gemini",
-            "idioma": idioma,
-            "texto_fragmento": (raw.get("titulo") or "")[:300],
-            "jugador_nombre": gr.get("jugador_nombre"),
-            "club_destino": gr.get("club_destino"),
+            "idioma": raw.get("idioma_detectado") or "es",
+            "texto_fragmento": titulo[:300],
+            "jugador_nombre": player_name,
+            "club_destino": None,
             "fecha_publicacion": raw.get("fecha_publicacion"),
         }
 
-    # ── Post-processing (Session 7 detectors) ────────────────────────────────
-
-    async def _post_process(self, result: dict[str, Any]) -> None:
-        """Run retraction detection and hard signal detection after extraction."""
-        from fichajes_bot.detectors.retraction_handler import RetractionHandler
-        from fichajes_bot.detectors.hard_signal_detector import HardSignalDetector
-
-        if self._retraction_handler is None:
-            self._retraction_handler = RetractionHandler(self.db)
-        if self._hard_signal_detector is None:
-            self._hard_signal_detector = HardSignalDetector(self.db)
-
-        # Retraction detection — only if there's an identified player
-        if result.get("jugador_id"):
-            try:
-                await self._retraction_handler.detect_retraction(result)
-            except Exception as exc:
-                logger.warning(f"RetractionHandler error: {exc}")
-
-        # Hard signal detection — sync regex, then async persist if found
-        tipo_señal = self._hard_signal_detector.detect(result)
-        if tipo_señal:
-            try:
-                await self._hard_signal_detector.persist_signal(
-                    rumor_id=result.get("rumor_id", ""),
-                    jugador_id=result.get("jugador_id"),
-                    tipo_señal=tipo_señal,
-                )
-            except Exception as exc:
-                logger.warning(f"HardSignalDetector persist error: {exc}")
-
-    # ── Persistence ───────────────────────────────────────────────────────────
+        logger.info(
+            f"[{rid}] ACCEPT player={player_name!r} tipo={operation_type} conf={confidence:.2f}"
+        )
+        await self._persist(result)
+        return result
 
     async def _persist(self, result: dict[str, Any]) -> None:
         """Insert rumor into DB and upsert jugador."""
         jugador_id = await self._upsert_jugador(result)
         result["jugador_id"] = jugador_id
 
-        # Correct tipo for players already at Real Madrid:
-        # news about them is almost always SALIDA/RENOVACION, not FICHAJE.
-        # Also catches auto-created players (club_actual=NULL) that match
-        # known RM squad names via the _KNOWN_NAMES list in regex_extractor.
-        if jugador_id and result.get("tipo_operacion") == "FICHAJE":
-            rows = await self.db.execute(
-                "SELECT club_actual, nombre_canonico FROM jugadores WHERE jugador_id=?",
-                [jugador_id],
-            )
-            if rows:
-                club = (rows[0].get("club_actual") or "").lower()
-                nombre = (rows[0].get("nombre_canonico") or "").lower()
-                from fichajes_bot.extraction.regex_extractor import _KNOWN_NAMES
-                is_rm_player = (
-                    club == "real madrid"
-                    or any(n.lower() in nombre for n in _KNOWN_NAMES)
-                )
-                if is_rm_player:
-                    texto = (result.get("texto_fragmento") or "").lower()
-                    incoming = any(kw in texto for kw in (
-                        "ficha al", "llega al madrid", "viene al madrid",
-                        "signs for real madrid", "to real madrid", "joins real madrid",
-                        "al real madrid procedente", "procede de", "coming to madrid",
-                    ))
-                    if not incoming:
-                        result["tipo_operacion"] = "SALIDA"
-                        logger.debug(
-                            f"[{jugador_id[:8]}] Corrected FICHAJE→SALIDA "
-                            f"(RM player '{rows[0].get('nombre_canonico')}', no incoming signal)"
-                        )
-
-        # Get periodista_id from fuente if available
         periodista_id: Optional[str] = None
         if result.get("fuente_id"):
             rows = await self.db.execute(
@@ -424,7 +142,6 @@ class ExtractionPipeline:
             ],
         )
 
-        # Enqueue scoring event
         await self.db.execute(
             "INSERT INTO eventos_pending (evento_id, tipo, payload) VALUES (?,?,?)",
             [
@@ -438,25 +155,19 @@ class ExtractionPipeline:
         )
 
     async def _upsert_jugador(self, result: dict[str, Any]) -> Optional[str]:
-        """Find or create a jugador by name. Returns jugador_id or None.
-
-        Auto-creates only when confianza >= 0.6 — low-confidence extractions
-        should not pollute the jugadores table with false positives.
-        """
+        """Find or create a jugador by name. Returns jugador_id or None."""
         nombre = result.get("jugador_nombre")
         if not nombre:
             return None
 
         sl = slugify(nombre)
 
-        # Try exact slug match first
         rows = await self.db.execute(
             "SELECT jugador_id FROM jugadores WHERE slug=? LIMIT 1", [sl]
         )
         if rows:
             return rows[0]["jugador_id"]
 
-        # Try fuzzy match via LIKE
         rows = await self.db.execute(
             "SELECT jugador_id FROM jugadores "
             "WHERE LOWER(nombre_canonico) LIKE LOWER(?) LIMIT 1",
@@ -465,25 +176,7 @@ class ExtractionPipeline:
         if rows:
             return rows[0]["jugador_id"]
 
-        # Only auto-create with sufficient extraction confidence
-        conf = result.get("confianza_extraccion") or 0.0
-        if conf < 0.6:
-            logger.debug(
-                f"_upsert_jugador: skip auto-create '{nombre}' "
-                f"conf={conf:.2f} < 0.60"
-            )
-            return None
-
-        # Detect entidad from title/fragment text
-        texto = (result.get("texto_fragmento") or "").lower()
-        entidad = (
-            "castilla"
-            if any(kw in texto for kw in ("castilla", "filial", "rm castilla", "real madrid castilla"))
-            else "primer_equipo"
-        )
-
         tipo = result.get("tipo_operacion") or "FICHAJE"
-
         jid = str(uuid.uuid4())
         await self.db.execute(
             """INSERT OR IGNORE INTO jugadores
@@ -494,13 +187,7 @@ class ExtractionPipeline:
                 is_active, created_at)
                VALUES (?,?,?,?,?,0.01,0.01,1.0,'[]','{}',1,
                        datetime('now'),datetime('now'),1,datetime('now'))""",
-            [jid, nombre, sl, tipo, entidad],
+            [jid, nombre, sl, tipo, "primer_equipo"],
         )
-        logger.info(
-            f"Auto-created jugador: '{nombre}' tipo={tipo} entidad={entidad} "
-            f"conf={conf:.2f} ({jid[:8]}…)"
-        )
+        logger.info(f"Auto-created jugador: '{nombre}' tipo={tipo} ({jid[:8]}…)")
         return jid
-
-
-from typing import Optional  # noqa: E402
