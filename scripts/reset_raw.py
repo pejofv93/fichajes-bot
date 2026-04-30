@@ -39,12 +39,16 @@ async def run() -> None:
         n = rows[0]["n"] if rows else "?"
         logger.info(f"Reset done — {n} rumores_raw now pending reprocessing")
 
-        for nombre in _BAD_JUGADORES:
-            await db.execute(
-                "DELETE FROM jugadores WHERE nombre_canonico = ?",
-                [nombre],
-            )
-        logger.info(f"Deleted bad jugadores: {_BAD_JUGADORES}")
+        try:
+            for nombre in _BAD_JUGADORES:
+                safe = nombre.replace("'", "''")
+                await db.execute(
+                    f"DELETE FROM jugadores WHERE nombre_canonico = '{safe}'",
+                    [],
+                )
+            logger.info(f"Deleted bad jugadores: {_BAD_JUGADORES}")
+        except Exception as exc:
+            logger.warning(f"DELETE jugadores failed (manual cleanup needed): {exc}")
 
 
 def main() -> None:
