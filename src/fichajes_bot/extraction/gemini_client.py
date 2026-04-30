@@ -32,6 +32,7 @@ Extract as JSON:
 - operation_type: 'FICHAJE' if player joining Real Madrid, 'SALIDA' if player leaving Real Madrid, null if unclear
 - confidence: float 0-1
 - is_real_madrid: true/false
+IMPORTANT: Do NOT extract coaches, managers or technical staff (e.g. Xabi Alonso, Carlo Ancelotti, Pep Guardiola, Jose Mourinho). Only extract outfield players or goalkeepers. Also do NOT extract players who are currently at Spanish rival clubs (Barcelona, Atletico Madrid) as loan players.
 Return only valid JSON, no other text."""
 
 _PROMPT_TEMPLATE = """\

@@ -19,6 +19,9 @@ from loguru import logger
 from fichajes_bot.persistence.d1_client import D1Client
 
 
+_BAD_JUGADORES = ("Rashford", "Marcus Rashford", "Xabi Alonso")
+
+
 async def run() -> None:
     async with D1Client() as db:
         await db.execute(
@@ -35,6 +38,13 @@ async def run() -> None:
         )
         n = rows[0]["n"] if rows else "?"
         logger.info(f"Reset done — {n} rumores_raw now pending reprocessing")
+
+        placeholders = ",".join("?" * len(_BAD_JUGADORES))
+        await db.execute(
+            f"DELETE FROM jugadores WHERE nombre_canonico IN ({placeholders})",
+            list(_BAD_JUGADORES),
+        )
+        logger.info(f"Deleted bad jugadores: {_BAD_JUGADORES}")
 
 
 def main() -> None:

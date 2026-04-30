@@ -24,6 +24,11 @@ _RM_RE = re.compile(
     re.IGNORECASE,
 )
 
+_COACHES_BLACKLIST = frozenset({
+    "xabi alonso", "carlo ancelotti", "pep guardiola", "jose mourinho",
+    "jurgen klopp", "alvaro arbeloa", "diego simeone", "hansi flick",
+})
+
 
 class ExtractionPipeline:
     """One instance per job run."""
@@ -71,6 +76,11 @@ class ExtractionPipeline:
         operation_type = gemini_result.get("operation_type")
 
         # Step 3: Accept or discard
+        if player_name and player_name.lower() in _COACHES_BLACKLIST:
+            logger.debug(f"[{rid}] SKIP coach_blacklist player={player_name!r}")
+            self._last_reject_reason = "coach_blacklist"
+            return None
+
         if not player_name or confidence < 0.5 or not is_real_madrid:
             logger.debug(
                 f"[{rid}] SKIP player={player_name!r} conf={confidence:.2f} is_rm={is_real_madrid}"
