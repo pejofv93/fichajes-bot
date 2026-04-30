@@ -1,4 +1,4 @@
-"""Gemini Flash 1.5 client.
+"""Gemini 2.0 Flash Lite client.
 
 Features:
   - SHA-256 cache in llm_cache table (TTL 7 days)
@@ -136,7 +136,7 @@ class GeminiClient:
             "INSERT OR REPLACE INTO llm_cache "
             "(cache_id, input_hash, modelo, response_json, created_at, expires_at) "
             "VALUES (?,?,?,?,datetime('now'),?)",
-            [cache_id, input_hash, "gemini-1.5-flash-latest", json.dumps(response), expires],
+            [cache_id, input_hash, "gemini-2.0-flash-lite", json.dumps(response), expires],
         )
 
     # ── Main extract ─────────────────────────────────────────────────────────
@@ -200,7 +200,7 @@ class GeminiClient:
         try:
             genai.configure(api_key=self._key)
             model = genai.GenerativeModel(
-                "gemini-1.5-flash-latest",
+                "gemini-2.0-flash-lite",
                 generation_config=genai.GenerationConfig(
                     response_mime_type="application/json",
                     temperature=0.1,
@@ -279,7 +279,7 @@ class GeminiClient:
         try:
             genai.configure(api_key=self._key)
             model = genai.GenerativeModel(
-                "gemini-1.5-flash-latest",
+                "gemini-2.0-flash-lite",
                 generation_config=genai.GenerationConfig(
                     response_mime_type="application/json",
                     temperature=0.1,
