@@ -39,11 +39,11 @@ async def run() -> None:
         n = rows[0]["n"] if rows else "?"
         logger.info(f"Reset done — {n} rumores_raw now pending reprocessing")
 
-        placeholders = ",".join("?" * len(_BAD_JUGADORES))
-        await db.execute(
-            f"DELETE FROM jugadores WHERE nombre_canonico IN ({placeholders})",
-            list(_BAD_JUGADORES),
-        )
+        for nombre in _BAD_JUGADORES:
+            await db.execute(
+                "DELETE FROM jugadores WHERE nombre_canonico = ?",
+                [nombre],
+            )
         logger.info(f"Deleted bad jugadores: {_BAD_JUGADORES}")
 
 
