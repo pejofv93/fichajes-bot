@@ -1,29 +1,10 @@
-"""Session 1 tests — schema, seeding, and prefilter."""
+"""Session 1 tests — schema, seeding, and helpers."""
 
 from __future__ import annotations
 
 import pytest
 
-from fichajes_bot.extraction.prefilter import prefilter
 from fichajes_bot.utils.helpers import sha256_hash, slugify
-
-
-class TestPrefilter:
-    def test_real_madrid_passes(self):
-        assert prefilter("Real Madrid want to sign Mbappé")
-
-    def test_unrelated_fails(self):
-        assert not prefilter("Barcelona signed a new striker today")
-
-    def test_bernabeu_with_transfer_passes(self):
-        # Two-stage prefilter: RM keyword AND transfer signal both required
-        assert prefilter("Press conference at the Bernabeu to unveil new signing")
-
-    def test_ancelotti_passes(self):
-        assert prefilter("Ancelotti confirmed the transfer")
-
-    def test_empty_fails(self):
-        assert not prefilter("")
 
 
 class TestHelpers:
@@ -75,8 +56,7 @@ class TestD1Schema:
             "cedidos", "retractaciones",
         ]
         for table in tables:
-            rows = await db.execute(f"SELECT 1 FROM {table} LIMIT 1")
-            # Should not raise — table exists
+            await db.execute(f"SELECT 1 FROM {table} LIMIT 1")
 
 
 class TestRumorRawRepository:

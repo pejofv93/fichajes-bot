@@ -1,4 +1,4 @@
-"""Session 3 tests — hybrid extractor: prefilter, regex, lexicon, gemini, pipeline."""
+"""Session 3 tests — pipeline, language detection, and Gemini client."""
 
 from __future__ import annotations
 
@@ -7,91 +7,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from fichajes_bot.extraction.confidence import THRESHOLD, compute_confidence, needs_llm
 from fichajes_bot.extraction.language_detect import detect
-from fichajes_bot.extraction.prefilter import prefilter, prefilter_debug
-from fichajes_bot.extraction.regex_extractor import RegexExtractor
-
-
-# ════════════════════════════════════════════════════════════════════════════
-# PREFILTER — 30 cases
-# ════════════════════════════════════════════════════════════════════════════
-
-PREFILTER_POSITIVE = [
-    # Spanish
-    "Real Madrid ficha a Mbappé por 180 millones",
-    "El Real Madrid ha alcanzado un acuerdo total con el jugador",
-    "Aquí vamos: Bellingham al Real Madrid, contrato firmado",
-    "Acuerdo cerrado. Real Madrid y Dortmund llegan a un trato",
-    "Revisión médica mañana para el nuevo fichaje del Madrid",
-    "Florentino Pérez anuncia el traspaso del centrocampista",
-    "Los blancos cierran la incorporación del defensa",
-    "Real Madrid CF presenta a su nuevo atacante esta tarde",
-    "Ancelotti confirma el fichaje del extremo internacional",
-    "El merengue llega a Madrid para firmar su contrato",
-    # English
-    "Here we go! Real Madrid sign new midfielder – contract agreed",
-    "Real Madrid are interested in signing the striker this summer",
-    "Done deal: Real Madrid complete signing of the winger",
-    "Real Madrid have made contact over the transfer of the defender",
-    "Medical scheduled for Real Madrid new signing tomorrow",
-    "Real Madrid want to sign the player in the January window",
-    # Italian
-    "Real Madrid: accordo trovato per il centrocampista brasiliano",
-    "Visite mediche per il nuovo acquisto del Real Madrid domani",
-    "Il Real Madrid vuole il giocatore per la prossima stagione",
-    # German
-    "Real Madrid: Einigung erzielt – Wechsel perfekt",
-    "Medizincheck bei Real Madrid morgen geplant",
-    "Interesse von Real Madrid am Mittelfeldspieler bestätigt",
-    # French
-    "Accord trouvé entre le Real Madrid et le club vendeur",
-    "Real Madrid: visite médicale prévue pour le nouveau joueur",
-    "Le Real Madrid veut signer le milieu de terrain cet été",
-]
-
-PREFILTER_NEGATIVE = [
-    # No RM mention
-    "Barcelona sign new striker from Atletico Madrid for 50M",
-    "Manchester City complete the signing of the midfielder",
-    "Here we go! PSG sign the striker – done deal confirmed",
-    "Juventus have reached an agreement with the player",
-    "Bayern Munich and Dortmund agree fee for the defender",
-    # RM mention but no transfer signal
-    "Real Madrid beat Barcelona 3-1 in El Clásico last night",
-    "Real Madrid draw 2-2 against Atletico in the derby",
-    "Ancelotti discusses the team's tactics ahead of the match",
-    "Real Madrid youth academy produces another talented player",
-    "Bernabeu stadium renovation expected to finish next year",
-]
-
-
-class TestPrefilter:
-    @pytest.mark.parametrize("text", PREFILTER_POSITIVE)
-    def test_positive_cases(self, text):
-        assert prefilter(text), f"Should PASS: {text}"
-
-    @pytest.mark.parametrize("text", PREFILTER_NEGATIVE)
-    def test_negative_cases(self, text):
-        assert not prefilter(text), f"Should FAIL: {text}"
-
-    def test_empty_string(self):
-        assert not prefilter("")
-
-    def test_none_like_empty(self):
-        assert not prefilter("   ")
-
-    def test_debug_shows_rm_match(self):
-        d = prefilter_debug("Real Madrid sign new player")
-        assert d["rm_match"] is not None
-
-    def test_debug_shows_transfer_match(self):
-        d = prefilter_debug("Real Madrid sign new player")
-        assert d["transfer_match"] is not None
-
-    def test_case_insensitive(self):
-        assert prefilter("REAL MADRID FICHAJE OFICIAL")
-        assert prefilter("real madrid done deal")
 
 
 # ════════════════════════════════════════════════════════════════════════════
@@ -119,269 +35,6 @@ class TestLanguageDetect:
 
     def test_short_returns_default(self):
         assert detect("hi") == "es"
-
-
-# ════════════════════════════════════════════════════════════════════════════
-# REGEX EXTRACTOR — 50 curated texts, accuracy > 85% (43/50)
-# ════════════════════════════════════════════════════════════════════════════
-
-# Each tuple: (text, expected_tipo, expected_fase_min, lang)
-REGEX_CASES = [
-    # ── Spanish FICHAJE ────────────────────────────────────────────────────
-    ("Aquí vamos. Real Madrid firma el contrato con Mbappé.",            "FICHAJE", 6, "es"),
-    ("Acuerdo total alcanzado entre Real Madrid y el club cedente.",     "FICHAJE", 6, "es"),
-    ("Contrato firmado, presentación mañana en el Bernabéu.",           "FICHAJE", 6, "es"),
-    ("Fichaje confirmado: el jugador llega al Real Madrid.",            "FICHAJE", 6, "es"),
-    ("Ya es oficial. El Real Madrid anuncia el fichaje.",               "FICHAJE", 6, "es"),
-    ("Done deal. El Madrid acuerda el traspaso.",                       "FICHAJE", 6, "es"),
-    ("Pasa el médico mañana en las instalaciones del Madrid.",          "FICHAJE", 5, "es"),
-    ("Revisión médica completada. Contrato hasta 2029.",               "FICHAJE", 5, "es"),
-    ("Acuerdo cerrado entre clubs. El jugador viaja a Madrid.",        "FICHAJE", 5, "es"),
-    ("Acuerdo personal alcanzado entre el jugador y el club.",         "FICHAJE", 4, "es"),
-    ("Negociaciones avanzadas entre Real Madrid y el vendedor.",       "FICHAJE", 3, "es"),
-    ("Oferta presentada por el Real Madrid al club francés.",          "FICHAJE", 3, "es"),
-    ("El Real Madrid quiere al centrocampista para el próximo verano.","FICHAJE", 2, "es"),
-    ("Interés del Real Madrid en el extremo alemán.",                  "FICHAJE", 1, "es"),
-    # ── Spanish SALIDA ─────────────────────────────────────────────────────
-    ("El jugador no renovará con el Real Madrid.",                     "SALIDA",  3, "es"),
-    ("Ha pedido la salida del club blanco.",                           "SALIDA",  3, "es"),
-    ("Salida confirmada del delantero al final de temporada.",         "SALIDA",  5, "es"),
-    ("Venta cerrada por 80 millones de euros.",                        "SALIDA",  6, "es"),
-    ("Rescisión acordada entre el jugador y el Real Madrid.",          "SALIDA",  5, "es"),
-    ("Fuera de los planes del entrenador para la próxima temporada.",  "SALIDA",  3, "es"),
-    # ── Spanish CESION ─────────────────────────────────────────────────────
-    ("Cedido al Borussia Dortmund por una temporada.",                 "CESION",  5, "es"),
-    ("Cesión confirmada del joven canterano al equipo alemán.",        "CESION",  6, "es"),
-    # ── Spanish RENOVACION ─────────────────────────────────────────────────
-    ("Renovación acordada con el capitán hasta 2027.",                 "RENOVACION", 5, "es"),
-    ("Nuevo contrato firmado. Renueva hasta 2028.",                    "RENOVACION", 6, "es"),
-    # ── English FICHAJE ────────────────────────────────────────────────────
-    ("Here we go! Real Madrid sign the midfielder – contract agreed.", "FICHAJE", 6, "en"),
-    ("Done deal confirmed. Real Madrid complete the transfer.",        "FICHAJE", 6, "en"),
-    ("Contract signed. Real Madrid announce new arrival.",             "FICHAJE", 6, "en"),
-    ("Medical scheduled for tomorrow at Real Madrid training ground.", "FICHAJE", 5, "en"),
-    ("Fee agreed between Real Madrid and the selling club.",          "FICHAJE", 4, "en"),
-    ("Personal terms agreed between the player and Real Madrid.",     "FICHAJE", 4, "en"),
-    ("Real Madrid are in advanced talks to sign the striker.",        "FICHAJE", 3, "en"),
-    ("Formal offer submitted by Real Madrid for the defender.",       "FICHAJE", 3, "en"),
-    ("Real Madrid have made contact over signing the player.",        "FICHAJE", 2, "en"),
-    ("Real Madrid are interested in signing the winger.",             "FICHAJE", 1, "en"),
-    # ── English SALIDA ─────────────────────────────────────────────────────
-    ("The player will not renew his contract at Real Madrid.",        "SALIDA",  3, "en"),
-    ("Has asked to leave Real Madrid this summer.",                   "SALIDA",  3, "en"),
-    ("Sale agreed between Real Madrid and the buying club.",          "SALIDA",  6, "en"),
-    ("Contract not renewed. Player leaves at end of season.",         "SALIDA",  5, "en"),
-    # ── English RENOVACION ─────────────────────────────────────────────────
-    ("Contract extension signed until 2028 at Real Madrid.",          "RENOVACION", 5, "en"),
-    ("New deal signed. Renewal confirmed at Real Madrid.",            "RENOVACION", 6, "en"),
-    # ── Italian ────────────────────────────────────────────────────────────
-    ("Accordo trovato tra Real Madrid e il club cedente.",            "FICHAJE", 5, "it"),
-    ("Fumata bianca per il trasferimento al Real Madrid.",            "FICHAJE", 6, "it"),
-    ("Visite mediche completate. Contratto firmato.",                 "FICHAJE", 5, "it"),
-    ("Non rinnoverà con il Real Madrid.",                             "SALIDA",  3, "it"),
-    # ── German ─────────────────────────────────────────────────────────────
-    ("Einigung erzielt! Wechsel zu Real Madrid perfekt.",             "FICHAJE", 5, "de"),
-    ("Deal perfekt, Medizincheck morgen bei Real Madrid.",            "FICHAJE", 6, "de"),
-    ("Verlässt Real Madrid im Sommer ablösefrei.",                    "SALIDA",  5, "de"),
-    # ── French ─────────────────────────────────────────────────────────────
-    ("Accord trouvé entre le Real Madrid et le club vendeur.",        "FICHAJE", 5, "fr"),
-    ("Transfert confirmé, contrat signé au Real Madrid.",             "FICHAJE", 6, "fr"),
-    ("Départ confirmé. Il quitte le Real Madrid cet été.",            "SALIDA",  6, "fr"),
-]
-
-
-class TestRegexExtractor:
-    def setup_method(self):
-        self.extractor = RegexExtractor()
-
-    @pytest.mark.parametrize("text,expected_tipo,min_fase,lang", REGEX_CASES)
-    def test_regex_accuracy(self, text, expected_tipo, min_fase, lang):
-        result = self.extractor.extract(text, lang)
-        assert result is not None, f"Expected match for: {text[:60]}"
-        assert result.tipo_operacion == expected_tipo, (
-            f"Expected {expected_tipo}, got {result.tipo_operacion} for: {text[:60]}"
-        )
-        assert result.fase_rumor >= min_fase - 1, (  # allow ±1 phase
-            f"Expected fase >= {min_fase-1}, got {result.fase_rumor} for: {text[:60]}"
-        )
-
-    def test_no_match_returns_none(self):
-        result = self.extractor.extract("Cristiano Ronaldo scores a hat-trick for Al Nassr", "en")
-        assert result is None
-
-    def test_high_confidence_phase6(self):
-        r = self.extractor.extract("Here we go! Real Madrid sign Bellingham", "en")
-        assert r is not None
-        assert r.confianza >= 0.90
-
-    def test_low_confidence_phase1(self):
-        r = self.extractor.extract("Real Madrid are interested in signing the player", "en")
-        assert r is not None
-        assert r.confianza < 0.60
-
-    def test_negation_reduces_confidence(self):
-        r = self.extractor.extract(
-            "Real Madrid contract signed – FAKE NEWS, totally false", "en"
-        )
-        assert r is not None
-        assert r.negation_found is True
-        assert r.confianza < 0.70
-
-    def test_known_name_extraction(self):
-        r = self.extractor.extract("Real Madrid sign Bellingham on a 5-year deal", "en")
-        assert r is not None
-        assert r.jugador_nombre is not None
-        assert "bellingham" in r.jugador_nombre.lower()
-
-    def test_accuracy_threshold(self):
-        """At least 85% of 50 cases must produce the correct tipo."""
-        correct = 0
-        total = len(REGEX_CASES)
-        for text, expected_tipo, min_fase, lang in REGEX_CASES:
-            r = self.extractor.extract(text, lang)
-            if r is not None and r.tipo_operacion == expected_tipo:
-                correct += 1
-        accuracy = correct / total
-        assert accuracy >= 0.85, (
-            f"Regex accuracy {accuracy:.1%} < 85% ({correct}/{total} correct)"
-        )
-
-
-# ════════════════════════════════════════════════════════════════════════════
-# LEXICON MATCHER
-# ════════════════════════════════════════════════════════════════════════════
-
-class TestLexiconMatcher:
-    def _make_entries(self) -> list[dict]:
-        return [
-            {"frase": "here we go", "idioma": "en", "categoria": "fichaje",
-             "fase_rumor": 6, "tipo_operacion": "FICHAJE", "peso_base": 0.98},
-            {"frase": "aquí vamos", "idioma": "es", "categoria": "fichaje",
-             "fase_rumor": 6, "tipo_operacion": "FICHAJE", "peso_base": 0.98},
-            {"frase": "contrato firmado", "idioma": "es", "categoria": "fichaje",
-             "fase_rumor": 6, "tipo_operacion": "FICHAJE", "peso_base": 0.97},
-            {"frase": "no renovará", "idioma": "es", "categoria": "salida",
-             "fase_rumor": 3, "tipo_operacion": "SALIDA", "peso_base": 0.75},
-            {"frase": "fee agreed", "idioma": "en", "categoria": "fichaje",
-             "fase_rumor": 4, "tipo_operacion": "FICHAJE", "peso_base": 0.82},
-        ]
-
-    def test_match_found(self):
-        from fichajes_bot.extraction.lexicon_matcher import LexiconMatcher
-        m = LexiconMatcher()
-        m.load_from_list(self._make_entries())
-        matches = m.match("Real Madrid: here we go, contract signed!", "en")
-        assert len(matches) >= 1
-        frases = [x["frase"] for x in matches]
-        assert "here we go" in frases
-
-    def test_match_language_filter(self):
-        from fichajes_bot.extraction.lexicon_matcher import LexiconMatcher
-        m = LexiconMatcher()
-        m.load_from_list(self._make_entries())
-        # English text, should NOT match Spanish entries
-        matches = m.match("here we go Real Madrid signing", "en")
-        for match in matches:
-            lang = (match.get("idioma") or "")[:2].lower()
-            assert lang in ("en", ""), f"Got non-English entry: {match}"
-
-    def test_no_match(self):
-        from fichajes_bot.extraction.lexicon_matcher import LexiconMatcher
-        m = LexiconMatcher()
-        m.load_from_list(self._make_entries())
-        matches = m.match("Barcelona wins the league title", "es")
-        assert matches == []
-
-    def test_compute_weight_empty(self):
-        from fichajes_bot.extraction.lexicon_matcher import LexiconMatcher
-        m = LexiconMatcher()
-        m.load_from_list([])
-        assert m.compute_weight([]) == 0.0
-
-    def test_compute_weight_single(self):
-        from fichajes_bot.extraction.lexicon_matcher import LexiconMatcher
-        m = LexiconMatcher()
-        entries = self._make_entries()
-        m.load_from_list(entries)
-        matches = m.match("here we go", "en")
-        w = m.compute_weight(matches)
-        assert w >= 0.90
-
-    def test_best_tipo(self):
-        from fichajes_bot.extraction.lexicon_matcher import LexiconMatcher
-        m = LexiconMatcher()
-        m.load_from_list(self._make_entries())
-        matches = m.match("aquí vamos, contrato firmado", "es")
-        tipo = m.best_tipo(matches)
-        assert tipo == "FICHAJE"
-
-    def test_best_fase(self):
-        from fichajes_bot.extraction.lexicon_matcher import LexiconMatcher
-        m = LexiconMatcher()
-        m.load_from_list(self._make_entries())
-        matches = m.match("aquí vamos, contrato firmado", "es")
-        fase = m.best_fase(matches)
-        assert fase == 6
-
-    @pytest.mark.asyncio
-    async def test_load_from_db(self, db):
-        """Lexicon entries seeded in DB are loadable."""
-        from fichajes_bot.extraction.lexicon_matcher import LexiconMatcher
-        # Load all entries (there are 200+ seeded)
-        entries = await db.execute("SELECT * FROM lexicon_entries")
-        assert len(entries) > 100
-
-        m = LexiconMatcher()
-        m.load_from_list(entries)
-        assert m._loaded
-
-        # Verify Spanish and English phrase both match
-        es_matches = m.match("aquí vamos, contrato firmado", "es")
-        assert len(es_matches) >= 1, "Should find Spanish phrases"
-
-        en_matches = m.match("here we go signed contract", "en")
-        assert len(en_matches) >= 1, "Should find English phrases"
-
-
-# ════════════════════════════════════════════════════════════════════════════
-# CONFIDENCE
-# ════════════════════════════════════════════════════════════════════════════
-
-class TestConfidence:
-    def test_high_regex_no_lex_above_threshold(self):
-        c = compute_confidence(regex_confianza=0.98, lexicon_weight=0.0, n_lexicon_matches=0)
-        assert c >= THRESHOLD
-
-    def test_low_regex_needs_llm(self):
-        c = compute_confidence(regex_confianza=0.45, lexicon_weight=0.0, n_lexicon_matches=0)
-        assert needs_llm(c)
-
-    def test_corroboration_boosts_confidence(self):
-        c_alone = compute_confidence(0.65, 0.0, 0)
-        c_combo = compute_confidence(0.65, 0.70, 3)
-        assert c_combo > c_alone
-
-    def test_negation_penalty(self):
-        c_clean = compute_confidence(0.90, 0.90, 2, negation_found=False)
-        c_negated = compute_confidence(0.90, 0.90, 2, negation_found=True)
-        assert c_negated < c_clean
-
-    def test_trial_balloon_penalty(self):
-        c_clean = compute_confidence(0.70, 0.70, 2, is_trial_balloon=False)
-        c_balloon = compute_confidence(0.70, 0.70, 2, is_trial_balloon=True)
-        assert c_balloon < c_clean
-
-    def test_zero_input_returns_zero(self):
-        c = compute_confidence(None, 0.0, 0)
-        assert c == 0.0
-
-    def test_needs_llm_below_threshold(self):
-        assert needs_llm(0.50) is True
-        assert needs_llm(0.59) is True
-
-    def test_no_llm_at_threshold(self):
-        assert needs_llm(THRESHOLD) is False
-        assert needs_llm(0.95) is False
 
 
 # ════════════════════════════════════════════════════════════════════════════
@@ -505,8 +158,7 @@ class TestGeminiClient:
         """_call_api must use self._key (env-aware property), not self._api_key.
 
         Regression test: previously _call_api used self._api_key (always "")
-        so Gemini was silently called with an empty key and always failed,
-        producing 0 real API calls even when GEMINI_API_KEY was set.
+        so Gemini was silently called with an empty key and always failed.
         """
         import sys
         import types
@@ -515,8 +167,6 @@ class TestGeminiClient:
 
         captured_key: list[str] = []
 
-        # Build a minimal fake google.generativeai module so _call_api
-        # can import it even when the real package isn't installed.
         fake_genai = types.ModuleType("google.generativeai")
 
         def mock_configure(api_key: str) -> None:
@@ -535,8 +185,6 @@ class TestGeminiClient:
         fake_genai.GenerativeModel = MagicMock(return_value=mock_model)
         fake_genai.GenerationConfig = MagicMock(return_value={})
 
-        # Inject the fake module so the `import google.generativeai` inside
-        # _call_api resolves to our mock instead of the real package.
         prev = sys.modules.get("google.generativeai")
         sys.modules["google.generativeai"] = fake_genai
         try:
@@ -592,96 +240,69 @@ def _make_raw(text: str, fuente_id: str = "romano_bluesky", idioma: str = "en") 
     }
 
 
+_FAKE_PLAYER_RESULT = {
+    "player_name": "Test Player",
+    "operation_type": "FICHAJE",
+    "confidence": 0.90,
+    "is_real_madrid": True,
+}
+
+
 class TestExtractionPipeline:
     @pytest.mark.asyncio
-    async def test_high_confidence_text_uses_regex_no_gemini(self, db):
-        """Phase-6 text → confidence >= 0.6, no Gemini call needed."""
+    async def test_gemini_called_for_rm_text(self, db):
+        """RM text passes prefilter → extract_simple is always called."""
         from fichajes_bot.extraction.pipeline import ExtractionPipeline
 
         pipeline = ExtractionPipeline(db)
         gemini_called = []
 
-        async def mock_gemini_extract(text, idioma="es"):
-            gemini_called.append(text)
+        async def mock_extract_simple(titulo):
+            gemini_called.append(titulo)
             return None
 
-        pipeline._gemini.extract = mock_gemini_extract
+        pipeline._gemini.extract_simple = mock_extract_simple
 
-        raw = _make_raw("Real Madrid: here we go! Test Incoming Player XYZ signs contract. Done deal confirmed.")
-        result = await pipeline.process(raw)
-
-        assert result is not None
-        assert result["extraido_con"] == "regex"
-        assert result["tipo_operacion"] == "FICHAJE"
-        assert len(gemini_called) == 0
-
-    @pytest.mark.asyncio
-    async def test_low_confidence_falls_through_to_gemini(self, db):
-        """Low-confidence text → Gemini is called."""
-        from fichajes_bot.extraction.pipeline import ExtractionPipeline
-
-        pipeline = ExtractionPipeline(db)
-        gemini_called = []
-
-        fake_gemini_result = {
-            "es_real_madrid": True,
-            "tipo_operacion": "FICHAJE",
-            "jugador_nombre": "TestPlayer",
-            "confianza": 0.80,
-            "fase_rumor": 3,
-            "lexico_detectado": "sondeo",
-            "club_destino": None,
-            "club_origen": None,
-        }
-
-        async def mock_gemini_extract(text, idioma="es"):
-            gemini_called.append(text)
-            return fake_gemini_result
-
-        pipeline._gemini.extract = mock_gemini_extract
-
-        # Text that prefilter passes and regex gives phase-1 low confidence → Gemini called
-        raw = _make_raw(
-            "Real Madrid are interested in signing the midfielder this summer.",
-            idioma="en",
-        )
-        result = await pipeline.process(raw)
+        raw = _make_raw("Real Madrid are interested in signing the midfielder this summer.")
+        await pipeline.process(raw)
 
         assert len(gemini_called) == 1
 
     @pytest.mark.asyncio
-    async def test_budget_exceeded_uses_regex_fallback(self, db):
-        """GeminiBudgetExceeded → fallback to regex result, no crash."""
+    async def test_budget_exceeded_returns_none(self, db):
+        """GeminiBudgetExceeded → returns None without crashing."""
         from fichajes_bot.extraction.gemini_client import GeminiBudgetExceeded
         from fichajes_bot.extraction.pipeline import ExtractionPipeline
 
         pipeline = ExtractionPipeline(db)
 
-        async def mock_gemini_extract(text, idioma="es"):
+        async def mock_extract_simple(titulo):
             raise GeminiBudgetExceeded("limit hit")
 
-        pipeline._gemini.extract = mock_gemini_extract
+        pipeline._gemini.extract_simple = mock_extract_simple
 
-        # Text that gives weak but non-zero regex signal
-        raw = _make_raw(
-            "Real Madrid are interested in signing the midfielder this summer.",
-            idioma="en",
-        )
-        # Should not raise — should fall back to regex result
+        raw = _make_raw("Real Madrid are interested in signing the midfielder.", idioma="en")
         result = await pipeline.process(raw)
-        # May be None (if below fallback threshold) — but must NOT raise
-        # The key assertion is that no exception propagated
-        assert True  # reached here without exception
+        assert result is None
 
     @pytest.mark.asyncio
     async def test_prefilter_blocks_non_rm_text(self, db):
-        """Text without RM keywords → None without any DB access."""
+        """Text without RM keywords → None without calling Gemini."""
         from fichajes_bot.extraction.pipeline import ExtractionPipeline
 
         pipeline = ExtractionPipeline(db)
+        gemini_called = []
+
+        async def mock_extract_simple(titulo):
+            gemini_called.append(titulo)
+            return None
+
+        pipeline._gemini.extract_simple = mock_extract_simple
+
         raw = _make_raw("Barcelona sign new striker from Atletico.", idioma="es")
         result = await pipeline.process(raw)
         assert result is None
+        assert len(gemini_called) == 0
 
     @pytest.mark.asyncio
     async def test_empty_text_returns_none(self, db):
@@ -693,54 +314,38 @@ class TestExtractionPipeline:
         assert result is None
 
     @pytest.mark.asyncio
-    async def test_html_texto_completo_stripped_for_extraction(self, db):
-        """GN-style HTML in texto_completo is stripped; useful title text survives."""
-        import uuid
+    async def test_low_confidence_discarded(self, db):
+        """confidence < 0.5 → discard."""
         from fichajes_bot.extraction.pipeline import ExtractionPipeline
 
         pipeline = ExtractionPipeline(db)
-        pipeline._gemini.extract = AsyncMock(return_value=None)
 
-        # Simulates the Google News RSS description field — a real GN HTML snippet
-        gn_html = (
-            '<a href="https://news.google.com/rss/articles/CBMi...">Real Madrid: here we go! '
-            "Test Incoming Player XYZ signs 5-year contract. Done deal.</a>"
-            '&nbsp;&nbsp;<font color="#6f6f6f">Sky Sports</font>'
-        )
-        raw = {
-            "raw_id": str(uuid.uuid4()),
-            "fuente_id": "rm_transfers_gn_en",
-            "titulo": "Real Madrid: here we go! Test Incoming Player XYZ signs contract. Done deal.",
-            "texto_completo": gn_html,
-            "idioma_detectado": "en",
-            "fecha_publicacion": "2024-07-01",
-        }
+        async def mock_extract_simple(titulo):
+            return {"player_name": "Some Player", "operation_type": "FICHAJE",
+                    "confidence": 0.3, "is_real_madrid": True}
+
+        pipeline._gemini.extract_simple = mock_extract_simple
+
+        raw = _make_raw("Real Madrid are interested in a new signing.", idioma="en")
         result = await pipeline.process(raw)
-
-        assert result is not None, "GN HTML texto_completo should yield a result after stripping"
-        assert result["tipo_operacion"] == "FICHAJE"
+        assert result is None
 
     @pytest.mark.asyncio
-    async def test_html_only_texto_completo_falls_back_to_titulo(self, db):
-        """If texto_completo is HTML-only (no extractable text after stripping), titulo is used."""
-        import uuid
+    async def test_no_player_name_discarded(self, db):
+        """player_name=null → discard even with high confidence."""
         from fichajes_bot.extraction.pipeline import ExtractionPipeline
 
         pipeline = ExtractionPipeline(db)
-        pipeline._gemini.extract = AsyncMock(return_value=None)
 
-        raw = {
-            "raw_id": str(uuid.uuid4()),
-            "fuente_id": "rm_transfers_gn_en",
-            "titulo": "Here we go! Real Madrid sign Test Incoming Player XYZ. Contract signed.",
-            "texto_completo": '<a href="https://news.google.com/rss/articles/CBMi..."></a>',
-            "idioma_detectado": "en",
-            "fecha_publicacion": "2024-07-01",
-        }
+        async def mock_extract_simple(titulo):
+            return {"player_name": None, "operation_type": "FICHAJE",
+                    "confidence": 0.9, "is_real_madrid": True}
+
+        pipeline._gemini.extract_simple = mock_extract_simple
+
+        raw = _make_raw("Real Madrid target set to arrive this week.", idioma="en")
         result = await pipeline.process(raw)
-
-        assert result is not None, "Empty-after-strip texto_completo should fall back to titulo"
-        assert result["tipo_operacion"] == "FICHAJE"
+        assert result is None
 
     @pytest.mark.asyncio
     async def test_result_persisted_to_rumores(self, db):
@@ -748,15 +353,17 @@ class TestExtractionPipeline:
         from fichajes_bot.extraction.pipeline import ExtractionPipeline
 
         pipeline = ExtractionPipeline(db)
-        pipeline._gemini.extract = AsyncMock(return_value=None)
 
-        raw = _make_raw(
-            "Real Madrid: here we go! Test Incoming Player XYZ signs 5-year contract. Done deal.",
-            idioma="en",
-        )
+        async def mock_extract_simple(titulo):
+            return _FAKE_PLAYER_RESULT
+
+        pipeline._gemini.extract_simple = mock_extract_simple
+
+        raw = _make_raw("Real Madrid sign Test Player on a 5-year deal.", idioma="en")
         result = await pipeline.process(raw)
 
         assert result is not None
+        assert result["extraido_con"] == "gemini"
         rows = await db.execute(
             "SELECT * FROM rumores WHERE raw_id=?", [raw["raw_id"]]
         )
@@ -769,12 +376,13 @@ class TestExtractionPipeline:
         from fichajes_bot.extraction.pipeline import ExtractionPipeline
 
         pipeline = ExtractionPipeline(db)
-        pipeline._gemini.extract = AsyncMock(return_value=None)
 
-        raw = _make_raw(
-            "Here we go! Real Madrid sign Test Incoming Player XYZ – contract agreed done deal.",
-            idioma="en",
-        )
+        async def mock_extract_simple(titulo):
+            return _FAKE_PLAYER_RESULT
+
+        pipeline._gemini.extract_simple = mock_extract_simple
+
+        raw = _make_raw("Real Madrid sign Test Player – contract agreed.", idioma="en")
         result = await pipeline.process(raw)
 
         assert result is not None
@@ -790,12 +398,13 @@ class TestExtractionPipeline:
         from fichajes_bot.extraction.pipeline import ExtractionPipeline
 
         pipeline = ExtractionPipeline(db)
-        pipeline._gemini.extract = AsyncMock(return_value=None)
 
-        raw = _make_raw(
-            "Real Madrid done deal: contract signed, medical completed.",
-            idioma="en",
-        )
+        async def mock_extract_simple(titulo):
+            return _FAKE_PLAYER_RESULT
+
+        pipeline._gemini.extract_simple = mock_extract_simple
+
+        raw = _make_raw("Real Madrid: Test Player signs 5-year contract.", idioma="en")
         result = await pipeline.process(raw)
 
         assert result is not None
@@ -816,7 +425,6 @@ class TestProcessJob:
         import uuid
         from fichajes_bot.ingestion.deduplication import make_hash
 
-        # Insert some raw items
         raw_items = [
             {
                 "raw_id": str(uuid.uuid4()),
@@ -845,12 +453,10 @@ class TestProcessJob:
             async def __aexit__(self, *a): pass
 
         with patch.object(process_module, "D1Client", PatchedD1):
-            # Disable Gemini for speed
-            with patch("fichajes_bot.extraction.gemini_client.GeminiClient.extract",
+            with patch("fichajes_bot.extraction.gemini_client.GeminiClient.extract_simple",
                        new_callable=AsyncMock, return_value=None):
                 counts = await process_module.run(limit=10)
 
-        # All items should have been processed (either extracted or discarded)
         unprocessed = await db.execute(
             "SELECT COUNT(*) as n FROM rumores_raw WHERE procesado=0"
         )
@@ -866,7 +472,7 @@ class TestProcessJob:
             async def __aexit__(self, *a): pass
 
         with patch.object(process_module, "D1Client", PatchedD1):
-            with patch("fichajes_bot.extraction.gemini_client.GeminiClient.extract",
+            with patch("fichajes_bot.extraction.gemini_client.GeminiClient.extract_simple",
                        new_callable=AsyncMock, return_value=None):
                 await process_module.run(limit=5)
 

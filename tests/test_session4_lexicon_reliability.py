@@ -1,4 +1,6 @@
 """Session 4 tests — Lexicon YAML, seed script, and ReliabilityManager."""
+# Note: TestLexiconMatching removed — lexicon_matcher.py deleted in pipeline simplification.
+# Note: TestPipelineReliabilityIntegration removed — get_reliability_manager() no longer in pipeline.
 
 from __future__ import annotations
 
@@ -108,125 +110,6 @@ class TestYamlStructure:
         entries = parse_yaml_file(path)
         assert entries == [], "phases.yaml should produce 0 lexicon entries"
 
-
-# ════════════════════════════════════════════════════════════════════════════
-# LEXICON MATCHING — 50 curated phrases from Appendix C
-# ════════════════════════════════════════════════════════════════════════════
-
-# (frase, expected_idioma, expected_categoria, min_fase_or_None)
-LEXICON_MATCH_CASES = [
-    # Spanish fichaje
-    ("aquí vamos",                  "es", "fichaje",    6),
-    ("acuerdo total alcanzado",     "es", "fichaje",    6),
-    ("contrato firmado",            "es", "fichaje",    6),
-    ("ya es oficial",               "es", "fichaje",    6),
-    ("fichaje confirmado",          "es", "fichaje",    6),
-    ("acuerdo cerrado",             "es", "fichaje",    5),
-    ("revisión médica",             "es", "fichaje",    5),
-    ("acuerdo personal alcanzado",  "es", "fichaje",    4),
-    ("negociaciones avanzadas",     "es", "fichaje",    3),
-    ("oferta presentada",           "es", "fichaje",    3),
-    ("contactos directos",          "es", "fichaje",    2),
-    ("interés del Real Madrid",     "es", "fichaje",    1),
-    # Spanish salida
-    ("no renovará",                 "es", "salida",     3),
-    ("ha pedido la salida",         "es", "salida",     3),
-    ("venta cerrada",               "es", "salida",     6),
-    ("rescisión acordada",          "es", "salida",     5),
-    ("salida confirmada",           "es", "salida",     6),
-    ("cesión confirmada",           "es", "cesion",     6),
-    ("cedido al",                   "es", "cesion",     5),
-    ("fin de contrato",             "es", "salida",     4),
-    # English signing
-    ("here we go",                  "en", "fichaje",    6),
-    ("done deal",                   "en", "fichaje",    6),
-    ("contract signed",             "en", "fichaje",    6),
-    ("medical scheduled",           "en", "fichaje",    5),
-    ("personal terms agreed",       "en", "fichaje",    4),
-    ("fee agreed",                  "en", "fichaje",    4),
-    ("in advanced talks",           "en", "fichaje",    3),
-    ("formal offer submitted",      "en", "fichaje",    3),
-    ("real madrid have made contact","en","fichaje",    2),
-    ("real madrid are interested",  "en", "fichaje",    1),
-    # English departure
-    ("sale agreed",                 "en", "salida",     6),
-    ("will not renew",              "en", "salida",     3),
-    ("contract not renewed",        "en", "salida",     5),
-    ("loan agreed",                 "en", "cesion",     5),
-    # Italian
-    ("accordo trovato",             "it", "fichaje",    5),
-    ("fumata bianca",               "it", "fichaje",    6),
-    ("contratto firmato",           "it", "fichaje",    6),
-    ("visite mediche",              "it", "fichaje",    5),
-    ("addio confermato",            "it", "salida",     6),
-    ("cessione accordata",          "it", "cesion",     5),
-    # German
-    ("einigung erzielt",            "de", "fichaje",    5),
-    ("deal perfekt",                "de", "fichaje",    6),
-    ("medizincheck",                "de", "fichaje",    5),
-    ("abgang fix",                  "de", "salida",     6),
-    ("vertrag läuft aus",           "de", "salida",     4),
-    # French
-    ("accord trouvé",               "fr", "fichaje",    5),
-    ("transfert confirmé",          "fr", "fichaje",    6),
-    ("visite médicale",             "fr", "fichaje",    5),
-    ("départ confirmé",             "fr", "salida",     6),
-    ("prolongation signée",         "fr", "renovacion", 6),
-    # Negation
-    ("no hay acuerdo",              "es", "negacion",   None),
-    ("denied",                      "en", "negacion",   None),
-]
-
-
-class TestLexiconMatching:
-    @pytest.fixture(autouse=True)
-    def setup_matcher(self):
-        """Build matcher from YAML files (not DB) for speed."""
-        from fichajes_bot.extraction.lexicon_matcher import LexiconMatcher
-        entries = _all_yaml_entries()
-        self.matcher = LexiconMatcher()
-        self.matcher.load_from_list(entries)
-
-    @pytest.mark.parametrize("frase,expected_idioma,expected_cat,min_fase", LEXICON_MATCH_CASES)
-    def test_phrase_matches_correctly(self, frase, expected_idioma, expected_cat, min_fase):
-        matches = self.matcher.match(frase, expected_idioma)
-        found = [m for m in matches if m.get("categoria") == expected_cat]
-        assert len(found) >= 1, (
-            f"'{frase}' should match category '{expected_cat}' in idioma '{expected_idioma}'"
-        )
-        if min_fase is not None:
-            fase_values = [m.get("fase_rumor") for m in found if m.get("fase_rumor")]
-            assert any(f >= min_fase - 1 for f in fase_values), (
-                f"'{frase}' fase should be ≥ {min_fase - 1}, got {fase_values}"
-            )
-
-    def test_weight_increases_with_multiple_signals(self):
-        matches_one = self.matcher.match("here we go", "en")
-        matches_multi = self.matcher.match("here we go done deal contract signed", "en")
-        w1 = self.matcher.compute_weight(matches_one)
-        w2 = self.matcher.compute_weight(matches_multi)
-        assert w2 >= w1, "More signals should not decrease weight"
-
-    def test_no_cross_language_contamination(self):
-        """English-only text should not match Spanish entries."""
-        matches = self.matcher.match("here we go Real Madrid signed", "en")
-        for m in matches:
-            lang = (m.get("idioma") or "")[:2].lower()
-            assert lang in ("en", ""), f"Got non-English entry for English text: {m['frase']}"
-
-    def test_negation_entries_have_negative_weight(self):
-        matches = self.matcher.match("no hay acuerdo totalmente falso", "es")
-        neg_matches = [m for m in matches if m.get("categoria") == "negacion"]
-        assert len(neg_matches) >= 1
-        for m in neg_matches:
-            assert float(m.get("peso_base", 0)) < 0
-
-    def test_here_we_go_has_periodista_id(self):
-        all_entries = _all_yaml_entries()
-        hereweго = [e for e in all_entries
-                    if e["frase"].lower() == "here we go" and e.get("periodista_id")]
-        assert len(hereweго) >= 1, "'here we go' should have a periodista_id entry"
-        assert hereweго[0]["periodista_id"] == "fabrizio-romano"
 
 
 # ════════════════════════════════════════════════════════════════════════════
@@ -569,27 +452,3 @@ class TestReliabilityManager:
         assert row["n_predicciones_global"] >= 2
 
 
-# ════════════════════════════════════════════════════════════════════════════
-# INTEGRATION — pipeline exposes ReliabilityManager
-# ════════════════════════════════════════════════════════════════════════════
-
-class TestPipelineReliabilityIntegration:
-    @pytest.mark.asyncio
-    async def test_pipeline_exposes_reliability_manager(self, db):
-        """ExtractionPipeline.get_reliability_manager() returns a ReliabilityManager."""
-        from fichajes_bot.calibration.reliability_manager import ReliabilityManager
-        from fichajes_bot.extraction.pipeline import ExtractionPipeline
-
-        pipeline = ExtractionPipeline(db)
-        mgr = await pipeline.get_reliability_manager()
-        assert isinstance(mgr, ReliabilityManager)
-
-    @pytest.mark.asyncio
-    async def test_reliability_manager_is_cached_in_pipeline(self, db):
-        """Calling get_reliability_manager twice returns same instance."""
-        from fichajes_bot.extraction.pipeline import ExtractionPipeline
-
-        pipeline = ExtractionPipeline(db)
-        mgr1 = await pipeline.get_reliability_manager()
-        mgr2 = await pipeline.get_reliability_manager()
-        assert mgr1 is mgr2
