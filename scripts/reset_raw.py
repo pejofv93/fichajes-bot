@@ -21,13 +21,13 @@ from fichajes_bot.persistence.d1_client import D1Client
 
 async def run() -> None:
     async with D1Client() as db:
-        result = await db.execute(
+        await db.execute(
             """UPDATE rumores_raw
                SET procesado = 0,
                    descartado = 0,
                    motivo_descarte = NULL
-               WHERE fecha_publicacion >= datetime('now', '-30 days')
-                  OR created_at >= datetime('now', '-30 days')"""
+               WHERE fecha_ingesta >= datetime('now', '-30 days')
+                  OR fecha_publicacion >= datetime('now', '-30 days')"""
         )
         rows = await db.execute(
             """SELECT COUNT(*) AS n FROM rumores_raw
